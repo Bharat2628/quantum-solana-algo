@@ -1,0 +1,2096 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>QUANT APEX | Institutional Solana Trading Terminal</title>
+  
+  <!-- Fonts: Geist (UI Sans) + Geist Mono (Tabular Financial Numerals) - Institutional Standard -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS Engine -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Geist"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['"Geist Mono"', 'monospace']
+          },
+          colors: {
+            apex: {
+              base: '#070A10',          // Calibrated Zinc/Slate dark base (taste-skill anti-pure-black)
+              surface: '#0B0F19',       // Primary panel surface
+              elevated: '#111726',      // Inset card surface
+              hover: '#172033',         // Interactive hover surface
+              border: 'rgba(255, 255, 255, 0.07)',
+              borderFocus: 'rgba(255, 255, 255, 0.16)',
+              textPrimary: '#F1F5F9',   // Slate-100 high contrast
+              textSecondary: '#94A3B8', // Slate-400 muted readable
+              textMuted: '#64748B',     // Slate-500 secondary meta
+              emerald: '#10B981',       // Execution Green (pass / profit)
+              emeraldBright: '#34D399',
+              rose: '#F43F5E',          // Stop Loss / Down
+              amber: '#F59E0B',         // Locked Floor / Warning
+              cyan: '#06B6D4',          // Scanner / Gate Highlight
+              solana: '#8B5CF6'         // Solana Accent
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- High-Precision Charting Libraries (Standalone Production - Zero Transpiler Dependency) -->
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* Strict Viewport Architecture (Zero Window Scroll) */
+    html, body {
+      height: 100vh;
+      width: 100vw;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #070A10;
+      color: #F1F5F9;
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+      letter-spacing: -0.012em;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Tabular Numeric Precision (Geist Mono with tight negative kerning) */
+    .tab-num {
+      font-family: 'Geist Mono', monospace;
+      font-feature-settings: "tnum" 1, "zero" 1;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.025em;
+    }
+
+    /* RonDesignLab Soft-Glass Specular Finish */
+    .soft-glass-panel {
+      background: rgba(11, 15, 25, 0.78);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 30px -10px rgba(0, 0, 0, 0.6);
+    }
+
+    .soft-glass-card {
+      background: rgba(17, 23, 38, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .soft-glass-card-active {
+      background: rgba(16, 185, 129, 0.06);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      box-shadow: inset 0 1px 0 rgba(16, 185, 129, 0.2), 0 0 20px -5px rgba(16, 185, 129, 0.15);
+    }
+
+    /* Tactile Interaction Physics (emil-kowalski design engineering) */
+    .btn-tactile {
+      transition: transform 140ms ease-out, background-color 140ms ease-out, border-color 140ms ease-out;
+    }
+    .btn-tactile:active {
+      transform: scale(0.975);
+    }
+
+    /* Pulsing Beacon Animation */
+    @keyframes beacon-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.9); }
+    }
+    .live-beacon {
+      animation: beacon-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Custom Scrollbar for Dense Tables */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(7, 10, 16, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    /* Table Row Hover State */
+    .dense-row {
+      transition: background-color 100ms ease-out;
+    }
+    .dense-row:hover {
+      background-color: rgba(255, 255, 255, 0.035);
+    }
+
+    /* Toast Notification Container */
+    #toastContainer {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast-pill {
+      pointer-events: auto;
+      animation: toast-slide 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes toast-slide {
+      from { transform: translateY(12px) scale(0.96); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    /* Mobile Responsive Architecture (< 1024px) */
+    @media (max-width: 1023px) {
+      html, body {
+        height: auto !important;
+        min-height: 100dvh !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      #panel-market-watch {
+        display: none;
+      }
+      #panel-market-watch.mobile-active {
+        display: flex !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: auto !important;
+        min-height: calc(100vh - 145px) !important;
+      }
+      #panel-trade-workspace {
+        display: flex;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+      }
+      #panel-trade-workspace.mobile-hidden {
+        display: none !important;
+      }
+      #panel-blotters {
+        display: none;
+      }
+      #panel-blotters.mobile-active {
+        display: flex !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        min-height: calc(100vh - 145px) !important;
+        max-height: none !important;
+        margin: 4px !important;
+      }
+      #tvChartContainer {
+        height: 250px !important;
+        min-height: 250px !important;
+      }
+      .chart-main-section {
+        height: 330px !important;
+        min-height: 330px !important;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      #panel-market-watch {
+        display: flex !important;
+      }
+      #panel-trade-workspace {
+        display: flex !important;
+        flex-direction: row !important;
+      }
+      #panel-blotters {
+        display: flex !important;
+      }
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen select-none overflow-hidden">
+
+  <!-- ========================================================================= -->
+  <!-- 1. TOP HEADER & TELEMETRY RIBBON (Height: 48px Fixed)                    -->
+  <!-- ========================================================================= -->
+  <header class="h-12 min-h-[48px] bg-apex-surface/90 border-b border-apex-border px-3.5 flex items-center justify-between z-30">
+    
+    <!-- Left: Brand + Engine Badge + VPS Liveness + Clock -->
+    <div class="flex items-center space-x-3 flex-shrink-0">
+      <div class="flex items-center space-x-2">
+        <div class="w-6 h-6 rounded-md bg-gradient-to-br from-apex-emerald via-emerald-600 to-teal-800 flex items-center justify-center font-black text-xs text-black shadow-sm font-mono">
+          QA
+        </div>
+        <span class="font-bold tracking-tight text-white text-sm">QUANT<span class="text-apex-emerald ml-0.5">APEX</span></span>
+      </div>
+
+      <div class="h-4 w-px bg-apex-border"></div>
+
+      <!-- Engine Status Pill -->
+      <div class="flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-apex-elevated border border-apex-border text-[11px] font-mono">
+        <span class="w-1.5 h-1.5 rounded-full bg-apex-emerald live-beacon"></span>
+        <span class="text-white font-semibold">V6.4</span>
+        <span class="text-apex-textMuted text-[9px] hidden sm:inline">&bull; 24/7 VPS</span>
+      </div>
+
+      <!-- Live Clock -->
+      <span id="headerLiveClock" class="text-xs font-mono text-apex-textSecondary tab-num hidden md:inline">--:--:-- UTC</span>
+    </div>
+
+    <!-- Center: Primary Financial KPI Ribbon (Grid Aligned - No Collision) -->
+    <div class="hidden lg:grid grid-cols-5 gap-3 max-w-3xl flex-1 px-4 text-xs font-mono">
+      
+      <!-- 1. Net Liquidation -->
+      <div class="px-2 py-1 rounded bg-apex-elevated/60 border border-apex-border/60 flex flex-col justify-center">
+        <span class="text-[9px] text-apex-textMuted uppercase font-semibold tracking-wider">Net Liquidation</span>
+        <span id="topNetLiq" class="text-white font-bold tab-num text-xs leading-tight">₹1,00,420.58</span>
+      </div>
+
+      <!-- 2. Free Margin -->
+      <div class="px-2 py-1 rounded bg-apex-elevated/60 border border-apex-border/60 flex flex-col justify-center">
+        <span class="text-[9px] text-apex-textMuted uppercase font-semibold tracking-wider">Free Reserve</span>
+        <span id="topFreeMargin" class="text-apex-emerald font-bold tab-num text-xs leading-tight">₹86,983.58</span>
+      </div>
+
+      <!-- 3. In-Flight Position Basket -->
+      <div class="px-2 py-1 rounded bg-apex-elevated/60 border border-apex-border/60 flex flex-col justify-center">
+        <span class="text-[9px] text-apex-textMuted uppercase font-semibold tracking-wider">In-Flight (1)</span>
+        <span id="topInFlight" class="text-apex-cyan font-bold tab-num text-xs leading-tight">₹13,437.00</span>
+      </div>
+
+      <!-- 4. Realized PnL -->
+      <div class="px-2 py-1 rounded bg-apex-elevated/60 border border-apex-border/60 flex flex-col justify-center">
+        <span class="text-[9px] text-apex-textMuted uppercase font-semibold tracking-wider">Realized PnL</span>
+        <span id="topRealizedPnL" class="text-apex-rose font-bold tab-num text-xs leading-tight">-₹3,016.43</span>
+      </div>
+
+      <!-- 5. Floating Unrealized PnL -->
+      <div class="px-2 py-1 rounded bg-apex-elevated/60 border border-apex-border/60 flex flex-col justify-center">
+        <span class="text-[9px] text-apex-textMuted uppercase font-semibold tracking-wider">Floating PnL</span>
+        <span id="topFloatingPnL" class="text-apex-emeraldBright font-bold tab-num text-xs leading-tight">+₹3,437.00 (+34.4%)</span>
+      </div>
+
+    </div>
+
+    <!-- Right: Currency Toggle + Refresh Sync -->
+    <div class="flex items-center space-x-2.5 flex-shrink-0">
+      <!-- Currency Switcher -->
+      <div class="flex items-center p-0.5 rounded-md bg-apex-elevated border border-apex-border text-[11px] font-mono">
+        <button id="currBtnINR" onclick="setCurrency('INR')" class="px-2 py-0.5 rounded font-bold text-white bg-apex-surface shadow-xs transition-colors">₹ INR</button>
+        <button id="currBtnUSD" onclick="setCurrency('USD')" class="px-2 py-0.5 rounded text-apex-textMuted hover:text-white transition-colors">$ USD</button>
+      </div>
+
+      <!-- Live Sync Beacon -->
+      <button onclick="fetchTelemetry()" title="Force Sync State" class="p-1.5 rounded-md bg-apex-elevated border border-apex-border text-apex-textSecondary hover:text-white btn-tactile">
+        <svg id="syncIconSvg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+        </svg>
+      </button>
+
+      <span id="headerLastSync" class="text-[10px] font-mono text-apex-textMuted tab-num hidden sm:inline">LIVE</span>
+    </div>
+
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 1.1 MOBILE FINANCIAL KPI CAROUSEL (Visible on < 1024px)                   -->
+  <!-- ========================================================================= -->
+  <div class="lg:hidden bg-apex-surface/95 border-b border-apex-border px-2 py-1.5 overflow-x-auto flex space-x-2 flex-shrink-0 z-30 no-scrollbar max-w-full" style="-webkit-overflow-scrolling: touch;">
+    <!-- 1. Net Liquidation -->
+    <div class="px-2.5 py-1 rounded bg-apex-elevated border border-apex-border flex flex-col justify-center flex-shrink-0 min-w-[110px]">
+      <span class="text-[9px] text-apex-textMuted uppercase font-semibold tracking-wider font-mono">Net Liq</span>
+      <span id="mobNetLiq" class="text-white font-bold tab-num text-xs leading-tight">₹1,00,000</span>
+    </div>
+
+    <!-- 2. Free Reserve -->
+    <div class="px-2.5 py-1 rounded bg-apex-elevated border border-apex-border flex flex-col justify-center flex-shrink-0 min-w-[105px]">
+      <span class="text-[9px] text-apex-textMuted uppercase font-semibold tracking-wider font-mono">Free Cash</span>
+      <span id="mobFreeMargin" class="text-apex-emerald font-bold tab-num text-xs leading-tight">₹89,892</span>
+    </div>
+
+    <!-- 3. In-Flight Position -->
+    <div class="px-2.5 py-1 rounded bg-apex-elevated border border-apex-border flex flex-col justify-center flex-shrink-0 min-w-[105px]">
+      <span class="text-[9px] text-apex-textMuted uppercase font-semibold tracking-wider font-mono">In-Flight</span>
+      <span id="mobInFlight" class="text-apex-cyan font-bold tab-num text-xs leading-tight">₹14,171</span>
+    </div>
+
+    <!-- 4. Floating Unrealized PnL -->
+    <div class="px-2.5 py-1 rounded bg-apex-elevated border border-apex-border flex flex-col justify-center flex-shrink-0 min-w-[130px]">
+      <span class="text-[9px] text-apex-textMuted uppercase font-semibold tracking-wider font-mono">Floating PnL</span>
+      <span id="mobFloatingPnL" class="text-apex-emeraldBright font-bold tab-num text-xs leading-tight">+₹4,171 (+41.7%)</span>
+    </div>
+
+    <!-- 5. Realized PnL -->
+    <div class="px-2.5 py-1 rounded bg-apex-elevated border border-apex-border flex flex-col justify-center flex-shrink-0 min-w-[110px]">
+      <span class="text-[9px] text-apex-textMuted uppercase font-semibold tracking-wider font-mono">Realized PnL</span>
+      <span id="mobRealizedPnL" class="text-apex-rose font-bold tab-num text-xs leading-tight">-₹107.56</span>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 1.2 MOBILE SEGMENTED VIEW CONTROLLER (Thumb-Zone Navigation Bar)          -->
+  <!-- ========================================================================= -->
+  <div class="lg:hidden flex items-center p-1 bg-apex-base/90 border-b border-apex-border gap-1 font-mono text-xs z-30 sticky top-0 backdrop-blur-md max-w-full">
+    <button id="mobTab-trade" onclick="switchMobileView('trade')" class="flex-1 py-1.5 rounded font-bold text-center flex items-center justify-center space-x-1.5 transition-colors bg-apex-emerald/15 text-white border border-apex-emerald/40 btn-tactile">
+      <svg class="w-3.5 h-3.5 text-apex-emerald" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span>Trade Deck</span>
+    </button>
+    <button id="mobTab-watch" onclick="switchMobileView('watch')" class="flex-1 py-1.5 rounded font-medium text-center flex items-center justify-center space-x-1.5 transition-colors text-apex-textSecondary hover:text-white bg-apex-elevated border border-transparent btn-tactile">
+      <svg class="w-3.5 h-3.5 text-apex-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span>Watchlist</span>
+    </button>
+    <button id="mobTab-blotter" onclick="switchMobileView('blotter')" class="flex-1 py-1.5 rounded font-medium text-center flex items-center justify-center space-x-1.5 transition-colors text-apex-textSecondary hover:text-white bg-apex-elevated border border-transparent btn-tactile">
+      <svg class="w-3.5 h-3.5 text-apex-amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      <span>Blotters</span>
+    </button>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 2. MAIN 3-COLUMN TRADING WORKSPACE (Viewport Height Calculated)           -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden p-1.5 lg:p-2 gap-2 min-h-0 max-w-full">
+    
+    <!-- --------------------------------------------------------------------- -->
+    <!-- COLUMN 1: MARKET WATCHLIST & DISCOVERY GATES (Width: 260px Fixed)      -->
+    <!-- --------------------------------------------------------------------- -->
+    <aside id="panel-market-watch" class="w-full lg:w-[260px] lg:min-w-[260px] lg:max-w-[260px] soft-glass-panel rounded-lg flex flex-col overflow-hidden flex-shrink-0">
+      
+      <!-- Watchlist Header Strip -->
+      <div class="h-9 px-3 bg-apex-surface border-b border-apex-border flex items-center justify-between text-xs font-semibold">
+        <div class="flex items-center space-x-1.5 text-white">
+          <svg class="w-3.5 h-3.5 text-apex-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span class="tracking-tight">Market Watch</span>
+        </div>
+        <span class="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-apex-elevated text-apex-textSecondary" id="watchlistCountBadge">8 Scanned</span>
+      </div>
+
+      <!-- Quick Token Search Input -->
+      <div class="p-2 border-b border-apex-border/60">
+        <div class="relative">
+          <input 
+            type="text" 
+            id="marketSearchInput" 
+            oninput="filterWatchlist()" 
+            placeholder="Search symbol / mint..."
+            class="w-full bg-apex-base/80 border border-apex-border rounded px-2.5 py-1 text-xs font-mono text-white placeholder-apex-textMuted focus:outline-none focus:border-apex-cyan/50"
+          >
+          <span class="absolute right-2.5 top-1.5 text-apex-textMuted text-[10px]">&crarr;</span>
+        </div>
+      </div>
+
+      <!-- Watchlist Table (Fixed Layout - Zero Overflow/Clipping Bug) -->
+      <div class="flex-1 overflow-y-auto">
+        <table class="w-full table-fixed text-[11px] font-mono">
+          <thead class="bg-apex-base/60 text-apex-textMuted sticky top-0 border-b border-apex-border/40 z-10">
+            <tr>
+              <th class="w-[38%] py-1.5 pl-2.5 text-left font-medium">TOKEN</th>
+              <th class="w-[32%] py-1.5 text-right font-medium">MULT</th>
+              <th class="w-[30%] py-1.5 pr-2.5 text-right font-medium">STATE</th>
+            </tr>
+          </thead>
+          <tbody id="marketWatchTbody" class="divide-y divide-apex-border/20">
+            <!-- Dynamically Rendered with 0 Horizontal Overflow -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- RonDesignLab Discovery Gate Criteria Strip (Bottom of Col 1) -->
+      <div class="p-2.5 bg-apex-elevated/40 border-t border-apex-border text-[10px] font-mono space-y-1.5">
+        <div class="flex justify-between items-center text-apex-textSecondary font-medium">
+          <span class="tracking-tight text-slate-300">Discovery Gate</span>
+          <span class="text-apex-emerald text-[9px] font-semibold px-1.5 py-0.2 rounded bg-apex-emerald/10 border border-apex-emerald/20">Strict Filter</span>
+        </div>
+        <div class="space-y-1 text-apex-textMuted">
+          <div class="flex justify-between">
+            <span>Min Liquidity:</span>
+            <span class="text-white font-bold">&ge; $40,000</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Age / Volume:</span>
+            <span class="text-white font-bold">&ge; 1.5h | &ge; 1.5x MC</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Ultra-SL Floor:</span>
+            <span class="text-apex-rose font-bold">0.97x (-3% Cap)</span>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- --------------------------------------------------------------------- -->
+    <!-- MOBILE WRAPPER: TRADE WORKSPACE (CHART + EXECUTION DECK)                -->
+    <!-- --------------------------------------------------------------------- -->
+    <div id="panel-trade-workspace" class="flex-1 flex flex-col lg:flex-row overflow-visible lg:overflow-hidden gap-2 min-w-0 max-w-full">
+      
+      <!-- ------------------------------------------------------------------- -->
+      <!-- COLUMN 2: CENTER DUAL-PANE TRADINGVIEW CANVAS (Fluid Width)          -->
+      <!-- ------------------------------------------------------------------- -->
+      <section class="chart-main-section w-full lg:flex-1 flex flex-col soft-glass-panel rounded-lg overflow-hidden min-w-0 flex-shrink-0">
+      
+      <!-- Chart Control Header Bar (Clean Non-Colliding Layout) -->
+      <div class="h-10 px-3 bg-apex-surface border-b border-apex-border flex items-center justify-between z-10 flex-shrink-0">
+        
+        <!-- Left: Active Symbol + Price + Multiplier + Floor Status -->
+        <div class="flex items-center space-x-3 overflow-hidden">
+          <div class="flex items-center space-x-1.5">
+            <span class="w-2 h-2 rounded-full bg-apex-emerald live-beacon"></span>
+            <h2 id="chartSymbolTitle" class="font-bold text-white text-sm font-mono tracking-tight">SYCAMORE / SOL</h2>
+            <span class="text-[9px] px-1.5 py-0.2 rounded bg-apex-emerald/15 text-apex-emerald font-mono font-bold">SLOT 3 RUNNER</span>
+          </div>
+
+          <div class="h-4 w-px bg-apex-border hidden sm:block"></div>
+
+          <!-- Dynamic Telemetry Pills in Header (Never floating on top of candles!) -->
+          <div class="hidden md:flex items-center space-x-3 text-xs font-mono">
+            <div>
+              <span class="text-apex-textMuted text-[10px]">PRICE:</span>
+              <strong id="chartPriceVal" class="text-white ml-1 tab-num">$0.000301</strong>
+            </div>
+            <div>
+              <span class="text-apex-textMuted text-[10px]">MULT:</span>
+              <strong id="chartMultVal" class="text-apex-emerald ml-1 tab-num">1.232x</strong>
+            </div>
+            <div>
+              <span class="text-apex-textMuted text-[10px]">PEAK:</span>
+              <strong id="chartPeakVal" class="text-apex-amber ml-1 tab-num">1.318x</strong>
+            </div>
+            <div>
+              <span class="text-apex-textMuted text-[10px]">LOCKED FLOOR:</span>
+              <strong id="chartFloorVal" class="text-apex-cyan ml-1 tab-num">1.140x (+14%)</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Timeframe Selectors + Resolution -->
+        <div class="flex items-center space-x-1 font-mono text-xs">
+          <button id="tfBtn-1m" onclick="setTimeframe('1m')" class="px-2 py-0.5 rounded bg-apex-elevated text-apex-emerald font-bold border border-apex-border/60 btn-tactile">1m</button>
+          <button id="tfBtn-5m" onclick="setTimeframe('5m')" class="px-2 py-0.5 rounded text-apex-textMuted hover:text-white transition-colors btn-tactile">5m</button>
+          <button id="tfBtn-15m" onclick="setTimeframe('15m')" class="px-2 py-0.5 rounded text-apex-textMuted hover:text-white transition-colors btn-tactile">15m</button>
+          <button id="tfBtn-1h" onclick="setTimeframe('1h')" class="px-2 py-0.5 rounded text-apex-textMuted hover:text-white transition-colors btn-tactile">1h</button>
+        </div>
+
+      </div>
+
+      <!-- Chart Canvas Viewport (TradingView Lightweight Charts) -->
+      <div id="tvChartContainer" class="flex-1 w-full h-full relative overflow-hidden bg-apex-base/40">
+        <!-- Rendered by LightweightCharts.createChart with Separate Volume Scale -->
+      </div>
+
+      <!-- Chart Footer Legend & Execution Markers Strip -->
+      <div class="h-7 px-3 bg-apex-surface/90 border-t border-apex-border flex items-center justify-between text-[10px] font-mono text-apex-textSecondary flex-shrink-0">
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-1.5">
+            <span class="w-2 h-0.5 bg-apex-cyan"></span>
+            <span>ENTRY (1.00x)</span>
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <span class="w-2 h-0.5 bg-apex-amber"></span>
+            <span id="legendFloorLabel">LOCKED FLOOR (1.14x)</span>
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <span class="w-2 h-0.5 bg-apex-rose"></span>
+            <span>ULTRA-SL (0.97x)</span>
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <span class="w-1.5 h-1.5 rounded-sm bg-apex-emerald/50"></span>
+            <span>VOL PROFILE: INDEPENDENT SCALE</span>
+          </div>
+        </div>
+        <div class="text-apex-textMuted hidden lg:block">
+          Slippage Tolerance: <strong class="text-white">0.25%</strong> &bull; Execution: <strong class="text-apex-emerald">Paper Real-Time</strong>
+        </div>
+      </div>
+
+    </section>
+
+      <!-- ----------------------------------------------------------------- -->
+      <!-- COLUMN 3: EXECUTION & RISK DECK (Width: 310px Fixed - No Cut-Off)    -->
+      <!-- ----------------------------------------------------------------- -->
+      <aside class="w-full lg:w-[310px] lg:min-w-[310px] lg:max-w-[310px] soft-glass-panel rounded-lg flex flex-col overflow-visible lg:overflow-hidden flex-shrink-0">
+      
+      <!-- Deck Header Strip -->
+      <div class="h-9 px-3 bg-apex-surface border-b border-apex-border flex items-center justify-between text-xs font-semibold">
+        <div class="flex items-center space-x-1.5 text-white">
+          <svg class="w-3.5 h-3.5 text-apex-emerald" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+          <span class="tracking-tight">Execution & Risk Deck</span>
+        </div>
+        <span class="text-[9px] font-mono font-medium px-1.5 py-0.2 rounded bg-apex-emerald/15 text-apex-emerald border border-apex-emerald/30" id="deckStatusBadge">1 Position Active</span>
+      </div>
+
+      <!-- Main Deck Scrollable Area (Fits within 100vh constraint) -->
+      <div class="flex-1 overflow-y-auto p-2.5 space-y-2">
+        
+        <!-- Active Runner Hero Card (RonDesignLab Style) -->
+        <div class="soft-glass-card-active rounded-lg p-3 space-y-2">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="flex items-center space-x-1.5 font-mono text-[10px] text-apex-textMuted">
+                <span class="text-apex-cyan font-bold" id="deckSlotLabel">SLOT 3</span>
+                <span>&bull;</span>
+                <span id="deckMint" class="truncate max-w-[110px]">3EC7...pump</span>
+              </div>
+              <h3 id="deckSymbol" class="text-lg font-bold font-mono text-white tracking-tight mt-0.5">SYCAMORE</h3>
+            </div>
+            <div class="text-right font-mono">
+              <div id="deckPnLVal" class="text-base font-bold text-apex-emerald tab-num">+₹3,437.00</div>
+              <div id="deckPnLPct" class="text-[10px] font-bold text-apex-emeraldBright tab-num">+34.37% (1.344x)</div>
+            </div>
+          </div>
+
+          <!-- Position Sizing & Peak Grid -->
+          <div class="grid grid-cols-3 gap-1.5 pt-1 text-[10px] font-mono border-t border-apex-border/40">
+            <div>
+              <span class="text-apex-textMuted block text-[9px]">Allocated</span>
+              <strong id="deckSizeVal" class="text-white tab-num">₹10,000</strong>
+            </div>
+            <div>
+              <span class="text-apex-textMuted block text-[9px]">Valuation</span>
+              <strong id="deckCurVal" class="text-white tab-num">₹13,437</strong>
+            </div>
+            <div>
+              <span class="text-apex-textMuted block text-[9px]">Peak Multiplier</span>
+              <strong id="deckPeakVal" class="text-apex-amber tab-num">1.363x</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- RonDesignLab Connected Stepper Ladder -->
+        <div class="soft-glass-card rounded-lg p-2.5 space-y-2">
+          <div class="flex justify-between items-center text-xs font-mono">
+            <span class="text-white font-semibold">Micro-Ratchet Ladder</span>
+            <span id="ladderTierArmedBadge" class="text-apex-amber text-[10px] font-bold px-1.5 py-0.2 rounded bg-apex-amber/15 border border-apex-amber/30">TIER 2 ARMED</span>
+          </div>
+
+          <!-- Progress Bar to Next Target -->
+          <div class="space-y-1">
+            <div class="flex justify-between text-[10px] font-mono text-apex-textMuted">
+              <span id="stepperTargetLabel">Progress to Tier 3 (1.50x):</span>
+              <span id="stepperProgText" class="text-white font-bold tab-num">37%</span>
+            </div>
+            <div class="w-full h-1.5 rounded-full bg-apex-base overflow-hidden">
+              <div id="stepperProgBar" class="h-full bg-gradient-to-r from-apex-emerald via-apex-cyan to-apex-amber rounded-full transition-all duration-500" style="width: 37%;"></div>
+            </div>
+          </div>
+
+          <!-- Dynamic Stepper Ladder Steps -->
+          <div id="stepperStepsList" class="space-y-1 text-[11px] font-mono">
+            <!-- Dynamically populated by renderStepperLadder -->
+          </div>
+        </div>
+
+        <!-- Direct Actions & Real External Links -->
+        <div class="space-y-1.5 font-mono text-xs">
+          <div class="grid grid-cols-2 gap-1.5">
+            <a id="deckDexLink" href="https://dexscreener.com/solana" target="_blank" class="p-2 rounded-md bg-apex-elevated border border-apex-border text-center flex items-center justify-center space-x-1 hover:bg-apex-hover transition-colors btn-tactile">
+              <span>DexScreener</span>
+              <svg class="w-3 h-3 text-apex-textMuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+            <a id="deckSolscanLink" href="https://solscan.io" target="_blank" class="p-2 rounded-md bg-apex-elevated border border-apex-border text-center flex items-center justify-center space-x-1 hover:bg-apex-hover transition-colors btn-tactile">
+              <span>Solscan</span>
+              <svg class="w-3 h-3 text-apex-textMuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5">
+            <button onclick="lockCurrentFloor()" class="p-2 rounded-md bg-apex-emerald/15 border border-apex-emerald/40 text-apex-emerald font-bold flex items-center justify-center space-x-1 hover:bg-apex-emerald/25 transition-colors btn-tactile">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>LOCK FLOOR</span>
+            </button>
+            <button onclick="queueMarketExit()" class="p-2 rounded-md bg-apex-rose/15 border border-apex-rose/40 text-apex-rose font-bold flex items-center justify-center space-x-1 hover:bg-apex-rose/25 transition-colors btn-tactile">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12.41 6.75 13 2 10.57 4.92"/><polyline points="18.57 12.91 21 10 15.66 10"/><polyline points="8 8 3 14 12 14 11 22 16 16"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              <span>MARKET EXIT</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      </aside>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- 3. BOTTOM TABBED BLOTTER & VISUAL EXECUTION PIPELINE                      -->
+  <!-- ========================================================================= -->
+  <footer id="panel-blotters" class="h-auto lg:h-[250px] lg:min-h-[250px] lg:max-h-[250px] soft-glass-panel m-1.5 lg:m-2 mt-0 rounded-lg flex flex-col overflow-hidden z-20 flex-shrink-0 max-w-full">
+    
+    <!-- Tab Navigation Strip (Clean Non-Colliding Layout) -->
+    <div class="h-9 min-h-[36px] bg-apex-surface border-b border-apex-border px-3 flex items-center justify-between flex-shrink-0">
+      
+      <!-- Tab Buttons -->
+      <div class="flex items-center space-x-1 overflow-x-auto flex-shrink-0">
+        <!-- 1. The RonDesignLab Visual Pipeline (PRIMARY TAB) -->
+        <button onclick="switchTab('pipeline')" id="tabBtn-pipeline" class="px-3 py-1.5 text-xs font-semibold rounded-t transition-colors flex items-center space-x-1.5 border-b-2 border-apex-emerald text-white bg-apex-emerald/10">
+          <span class="tracking-tight">Lifecycle Pipeline</span>
+          <span class="text-[9px] px-1 py-0.2 rounded bg-apex-cyan/20 text-apex-cyan font-mono font-medium">RON LAB</span>
+        </button>
+
+        <!-- 2. Active Positions Blotter -->
+        <button onclick="switchTab('positions')" id="tabBtn-positions" class="px-3 py-1.5 text-xs font-semibold rounded-t transition-colors flex items-center space-x-1.5 border-b-2 border-transparent text-apex-textSecondary hover:text-white">
+          <span class="tracking-tight">Positions</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-medium bg-apex-elevated text-apex-textMuted" id="posTabBadge">1</span>
+        </button>
+
+        <!-- 3. Closed Trades Blotter -->
+        <button onclick="switchTab('blotter')" id="tabBtn-blotter" class="px-3 py-1.5 text-xs font-semibold rounded-t transition-colors flex items-center space-x-1.5 border-b-2 border-transparent text-apex-textSecondary hover:text-white">
+          <span class="tracking-tight">Order Blotter</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-medium bg-apex-elevated text-apex-textMuted" id="blotterTabBadge">13</span>
+        </button>
+
+        <!-- 4. PnL Waterfall & Equity Curve -->
+        <button onclick="switchTab('waterfall')" id="tabBtn-waterfall" class="px-3 py-1.5 text-xs font-semibold rounded-t transition-colors flex items-center space-x-1.5 border-b-2 border-transparent text-apex-textSecondary hover:text-white">
+          <span class="tracking-tight">Waterfall & Equity</span>
+        </button>
+
+        <!-- 5. Capital & Performance Edge Matrix -->
+        <button onclick="switchTab('analytics')" id="tabBtn-analytics" class="px-3 py-1.5 text-xs font-semibold rounded-t transition-colors flex items-center space-x-1.5 border-b-2 border-transparent text-apex-textSecondary hover:text-white">
+          <span class="tracking-tight">Capital & Edge Matrix</span>
+        </button>
+
+        <!-- 6. Engine Audit Stream -->
+        <button onclick="switchTab('audit')" id="tabBtn-audit" class="px-3 py-1.5 text-xs font-semibold rounded-t transition-colors flex items-center space-x-1.5 border-b-2 border-transparent text-apex-textSecondary hover:text-white">
+          <span class="tracking-tight">Audit Stream</span>
+        </button>
+      </div>
+
+      <!-- Global Portfolio Stats (Right Side Summary) -->
+      <div class="hidden xl:flex items-center space-x-3 text-xs font-mono text-apex-textSecondary flex-shrink-0 pl-3 border-l border-apex-border">
+        <span>Starting: <strong class="text-white tab-num">₹100,000.00</strong></span>
+        <span>&bull;</span>
+        <span>Peak: <strong class="text-apex-emerald tab-num" id="dockPeakStat">₹106,220.08</strong></span>
+        <span>&bull;</span>
+        <span>Win Rate: <strong class="text-apex-cyan tab-num" id="dockWinRateStat">46.2%</strong></span>
+      </div>
+
+    </div>
+
+    <!-- Tab Contents Container -->
+    <div class="flex-1 overflow-hidden relative p-2.5">
+      
+      <!-- =================================================================== -->
+      <!-- TAB 1: RON DESIGN LAB 5-STAGE VISUAL EXECUTION PIPELINE (DEFAULT)    -->
+      <!-- =================================================================== -->
+      <div id="tabContent-pipeline" class="h-full flex items-center justify-between gap-2 overflow-x-auto">
+        
+        <!-- Stage 1: Discovery Scanner Gate -->
+        <div class="flex-1 min-w-[190px] h-full soft-glass-card rounded-lg p-3 flex flex-col justify-between border-l-2 border-l-apex-cyan">
+          <div>
+            <div class="flex items-center justify-between text-[10px] font-mono">
+              <span class="text-apex-cyan font-bold">STAGE 01</span>
+              <span class="px-1.5 py-0.2 rounded bg-apex-cyan/20 text-apex-cyan font-bold">PASSED</span>
+            </div>
+            <h4 class="font-bold text-white text-xs mt-1">Discovery Gate</h4>
+            <p class="text-[10px] text-apex-textMuted mt-0.5">Mempool & Raydium Screener</p>
+          </div>
+          <div class="space-y-1 font-mono text-[10px] bg-apex-base/50 p-2 rounded border border-apex-border/40">
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Liquidity:</span>
+              <span class="text-white font-bold">$45,193 (&ge; $40k)</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Volume:</span>
+              <span class="text-white font-bold">$3.52M (&ge; 1.5x)</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Age:</span>
+              <span class="text-white font-bold">2.4h (&ge; 1.5h)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bezier Vector Connector 1 -->
+        <div class="w-6 flex items-center justify-center flex-shrink-0 text-apex-border">
+          <svg class="w-6 h-6 text-apex-textMuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+
+        <!-- Stage 2: Security & Rug Audit -->
+        <div class="flex-1 min-w-[190px] h-full soft-glass-card rounded-lg p-3 flex flex-col justify-between border-l-2 border-l-apex-emerald">
+          <div>
+            <div class="flex items-center justify-between text-[10px] font-mono">
+              <span class="text-apex-emerald font-bold">STAGE 02</span>
+              <span class="px-1.5 py-0.2 rounded bg-apex-emerald/20 text-apex-emerald font-bold">VERIFIED</span>
+            </div>
+            <h4 class="font-bold text-white text-xs mt-1">Security & Rug Audit</h4>
+            <p class="text-[10px] text-apex-textMuted mt-0.5">Automated Contract Checks</p>
+          </div>
+          <div class="space-y-1 font-mono text-[10px] bg-apex-base/50 p-2 rounded border border-apex-border/40">
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Freeze Auth:</span>
+              <span class="text-apex-emerald font-bold">REVOKED</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Mint Auth:</span>
+              <span class="text-apex-emerald font-bold">RENOUNCED</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Top 10 Supply:</span>
+              <span class="text-white font-bold">12.4% (&le; 15%)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bezier Vector Connector 2 -->
+        <div class="w-6 flex items-center justify-center flex-shrink-0 text-apex-border">
+          <svg class="w-6 h-6 text-apex-textMuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+
+        <!-- Stage 3: Capital Allocation -->
+        <div class="flex-1 min-w-[190px] h-full soft-glass-card rounded-lg p-3 flex flex-col justify-between border-l-2 border-l-apex-cyan">
+          <div>
+            <div class="flex items-center justify-between text-[10px] font-mono">
+              <span class="text-apex-cyan font-bold">STAGE 03</span>
+              <span class="px-1.5 py-0.2 rounded bg-apex-cyan/20 text-apex-cyan font-bold">LOCKED</span>
+            </div>
+            <h4 class="font-bold text-white text-xs mt-1">Position Allocation</h4>
+            <p class="text-[10px] text-apex-textMuted mt-0.5">Slot Capital Lock</p>
+          </div>
+          <div class="space-y-1 font-mono text-[10px] bg-apex-base/50 p-2 rounded border border-apex-border/40">
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Active Slot:</span>
+              <span id="pipeSlotTitle" class="text-white font-bold">Slot 1: BUBBLE</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Allocation Size:</span>
+              <span id="pipeAllocSize" class="text-white font-bold">₹10,000.00</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Entry Tick:</span>
+              <span id="pipeEntryTick" class="text-white font-bold">$0.000753</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bezier Vector Connector 3 (Active Pulsing Line) -->
+        <div class="w-6 flex items-center justify-center flex-shrink-0 text-apex-emerald">
+          <svg class="w-6 h-6 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+
+        <!-- Stage 4: Micro-Ratchet Lock (CURRENT ACTIVE STAGE) -->
+        <div class="flex-1 min-w-[210px] h-full soft-glass-card-active rounded-lg p-3 flex flex-col justify-between border-l-2 border-l-apex-emerald">
+          <div>
+            <div class="flex items-center justify-between text-[10px] font-mono">
+              <span class="text-apex-emerald font-bold flex items-center space-x-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-apex-emerald live-beacon"></span>
+                <span>STAGE 04 (ACTIVE)</span>
+              </span>
+              <span id="pipeStage4LockBadge" class="px-1.5 py-0.2 rounded bg-apex-emerald text-apex-base font-black">LOCKED +30%</span>
+            </div>
+            <h4 class="font-bold text-white text-xs mt-1">Micro-Ratchet Trailing</h4>
+            <p class="text-[10px] text-apex-textMuted mt-0.5">Asymmetric Profit Guard</p>
+          </div>
+          <div class="space-y-1 font-mono text-[10px] bg-apex-base/70 p-2 rounded border border-apex-emerald/30">
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Current Multiple:</span>
+              <span id="pipeMultVal" class="text-apex-emerald font-bold tab-num">1.624x (+62.4%)</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Peak Achieved:</span>
+              <span id="pipePeakVal" class="text-apex-amber font-bold tab-num">1.827x</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Guaranteed Cash Floor:</span>
+              <span id="pipeFloorVal" class="text-apex-cyan font-bold tab-num">+₹3,000.00 (1.300x)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bezier Vector Connector 4 -->
+        <div class="w-6 flex items-center justify-center flex-shrink-0 text-apex-border">
+          <svg class="w-6 h-6 text-apex-textMuted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+
+        <!-- Stage 5: Settlement & Capital Recycler -->
+        <div class="flex-1 min-w-[190px] h-full soft-glass-card rounded-lg p-3 flex flex-col justify-between border-l-2 border-l-apex-amber">
+          <div>
+            <div class="flex items-center justify-between text-[10px] font-mono">
+              <span class="text-apex-amber font-bold">STAGE 05</span>
+              <span class="px-1.5 py-0.2 rounded bg-apex-amber/20 text-apex-amber font-bold">PENDING EXIT</span>
+            </div>
+            <h4 class="font-bold text-white text-xs mt-1">Settlement & Recycle</h4>
+            <p class="text-[10px] text-apex-textMuted mt-0.5">Compounding Engine</p>
+          </div>
+          <div class="space-y-1 font-mono text-[10px] bg-apex-base/50 p-2 rounded border border-apex-border/40">
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Target Free Margin:</span>
+              <span id="pipeCashVal" class="text-white font-bold tab-num">₹86,983.58</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Auto-Reinvest:</span>
+              <span class="text-apex-emerald font-bold">ENABLED</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-apex-textMuted">Next Scan Queue:</span>
+              <span class="text-apex-cyan font-bold">READY (Slot 1 & 2)</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- TAB 2: ACTIVE POSITIONS TABLE (Fixed Column Percentages)             -->
+      <!-- =================================================================== -->
+      <div id="tabContent-positions" class="h-full hidden overflow-y-auto overflow-x-auto" style="-webkit-overflow-scrolling: touch;">
+        <table class="w-full min-w-[720px] table-fixed text-xs font-mono">
+          <thead class="bg-apex-surface text-apex-textMuted sticky top-0 border-b border-apex-border z-10">
+            <tr>
+              <th class="w-[7%] py-2 pl-3 text-left">SLOT</th>
+              <th class="w-[10%] py-2 text-left">TOKEN</th>
+              <th class="w-[12%] py-2 text-left">MINT</th>
+              <th class="w-[8%] py-2 text-left">TIME</th>
+              <th class="w-[9%] py-2 text-right">ENTRY</th>
+              <th class="w-[9%] py-2 text-right">PRICE</th>
+              <th class="w-[8%] py-2 text-right">MULT</th>
+              <th class="w-[12%] py-2 text-right">STOP / FLOOR</th>
+              <th class="w-[8%] py-2 text-right">SIZE</th>
+              <th class="w-[9%] py-2 text-right">VALUE</th>
+              <th class="w-[8%] py-2 text-right font-bold">UNREALIZED</th>
+            </tr>
+          </thead>
+          <tbody id="positionsTableTbody" class="divide-y divide-apex-border/20">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- TAB 3: ORDER BLOTTER (Closed Trades History)                         -->
+      <!-- =================================================================== -->
+      <div id="tabContent-blotter" class="h-full hidden overflow-y-auto overflow-x-auto" style="-webkit-overflow-scrolling: touch;">
+        <table class="w-full min-w-[720px] table-fixed text-xs font-mono">
+          <thead class="bg-apex-surface text-apex-textMuted sticky top-0 border-b border-apex-border z-10">
+            <tr>
+              <th class="w-[5%] py-2 pl-3 text-left">#</th>
+              <th class="w-[10%] py-2 text-left">TOKEN</th>
+              <th class="w-[9%] py-2 text-left">ENTRY</th>
+              <th class="w-[9%] py-2 text-left">EXIT</th>
+              <th class="w-[6%] py-2 text-left">HOLD</th>
+              <th class="w-[9%] py-2 text-right">IN (INR)</th>
+              <th class="w-[9%] py-2 text-right">OUT (INR)</th>
+              <th class="w-[10%] py-2 text-right font-bold">NET PNL</th>
+              <th class="w-[8%] py-2 text-right">MULT</th>
+              <th class="w-[17%] py-2 text-left pl-3">EXIT REASON</th>
+              <th class="w-[8%] py-2 text-center pr-3">OUTCOME</th>
+            </tr>
+          </thead>
+          <tbody id="closedBlotterTbody" class="divide-y divide-apex-border/20">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- TAB 4: PNL WATERFALL & CUMULATIVE EQUITY DUAL-CHART DOCK             -->
+      <!-- =================================================================== -->
+      <div id="tabContent-waterfall" class="h-full hidden grid grid-cols-2 gap-3 p-1">
+        <!-- PnL Waterfall -->
+        <div class="h-full soft-glass-card rounded p-2 flex flex-col">
+          <div class="flex justify-between items-center text-xs font-mono pb-1 border-b border-apex-border/40">
+            <span class="text-apex-textSecondary font-semibold">Per-Trade Net PnL (INR)</span>
+            <span id="wfNetSum" class="text-apex-rose font-bold tab-num">-₹3,016.43 Net</span>
+          </div>
+          <div class="flex-1 min-h-0 pt-1">
+            <canvas id="waterfallCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Cumulative Equity Curve -->
+        <div class="h-full soft-glass-card rounded p-2 flex flex-col">
+          <div class="flex justify-between items-center text-xs font-mono pb-1 border-b border-apex-border/40">
+            <span class="text-apex-textSecondary font-semibold">Cumulative Portfolio Equity Curve</span>
+            <span id="eqCurSum" class="text-apex-emerald font-bold tab-num">₹100,420.58</span>
+          </div>
+          <div class="flex-1 min-h-0 pt-1">
+            <canvas id="equityCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- TAB 5: CAPITAL & PERFORMANCE EDGE MATRIX (Zero-Empty-Donuts)         -->
+      <!-- =================================================================== -->
+      <div id="tabContent-analytics" class="h-full hidden grid grid-cols-3 gap-3 p-1 font-mono text-xs">
+        
+        <!-- Matrix Card 1: Capital Liquidity Allocation -->
+        <div class="soft-glass-card rounded-lg p-3 flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center text-apex-textSecondary font-semibold">
+              <span>CAPITAL LIQUIDITY ALLOCATION</span>
+              <span id="anCashPct" class="text-apex-emerald font-bold">87% Cash</span>
+            </div>
+            <p class="text-[10px] text-apex-textMuted mt-0.5">Free Cash vs In-Flight Risk</p>
+          </div>
+
+          <!-- Horizontal Segmented Capital Bar -->
+          <div class="space-y-1.5 my-2">
+            <div class="w-full h-3 rounded bg-apex-base overflow-hidden flex">
+              <div id="barCashRatio" class="h-full bg-apex-emerald transition-all duration-500" style="width: 87%;" title="Free Cash Reserve"></div>
+              <div id="barInFlightRatio" class="h-full bg-apex-cyan transition-all duration-500" style="width: 13%;" title="In-Flight Active Positions"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-apex-textMuted">
+              <span class="flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-xs bg-apex-emerald"></span>
+                <span>Free Cash: <strong class="text-white tab-num" id="anCashVal">₹86,983.58</strong></span>
+              </span>
+              <span class="flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-xs bg-apex-cyan"></span>
+                <span>In-Flight: <strong class="text-white tab-num" id="anInFlightVal">₹13,437.00</strong></span>
+              </span>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-apex-textSecondary pt-2 border-t border-apex-border/40 flex justify-between">
+            <span>Portfolio Peak Equity:</span>
+            <strong class="text-apex-emerald tab-num" id="anPeakVal">₹106,220.08</strong>
+          </div>
+        </div>
+
+        <!-- Matrix Card 2: Win / Loss Discipline & Rate -->
+        <div class="soft-glass-card rounded-lg p-3 flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center text-apex-textSecondary font-semibold">
+              <span>WIN / STOP EXECUTION RATIO</span>
+              <span id="anWinLossRatio" class="text-white font-bold">6W / 7L</span>
+            </div>
+            <p class="text-[10px] text-apex-textMuted mt-0.5">Automated Trade Outcomes</p>
+          </div>
+
+          <!-- Horizontal Win/Loss Bar -->
+          <div class="space-y-1.5 my-2">
+            <div class="w-full h-3 rounded bg-apex-base overflow-hidden flex">
+              <div id="barWinRatio" class="h-full bg-apex-emerald transition-all duration-500" style="width: 46.2%;" title="Take Profit Exits"></div>
+              <div id="barLossRatio" class="h-full bg-apex-rose transition-all duration-500" style="width: 53.8%;" title="Disciplined Stop Cuts"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-apex-textMuted">
+              <span class="flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-xs bg-apex-emerald"></span>
+                <span>Wins: <strong class="text-white tab-num" id="anWinRateVal">46.2%</strong></span>
+              </span>
+              <span class="flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-xs bg-apex-rose"></span>
+                <span>Stops: <strong class="text-white tab-num">53.8%</strong></span>
+              </span>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-apex-textSecondary pt-2 border-t border-apex-border/40 flex justify-between">
+            <span>Profit Factor:</span>
+            <strong class="text-apex-cyan tab-num" id="anProfitFactor">0.77x</strong>
+          </div>
+        </div>
+
+        <!-- Matrix Card 3: Asymmetric Mathematical Edge -->
+        <div class="soft-glass-card rounded-lg p-3 flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center text-apex-textSecondary font-semibold">
+              <span>ASYMMETRIC EDGE METRICS</span>
+              <span class="text-apex-emerald font-bold">V6.4 ACTIVE</span>
+            </div>
+            <p class="text-[10px] text-apex-textMuted mt-0.5">Payoff Distribution Architecture</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 my-1">
+            <div class="bg-apex-base/60 p-1.5 rounded border border-apex-border/40">
+              <span class="text-[9px] text-apex-textMuted block">Avg Win / Loss</span>
+              <strong class="text-white text-[11px] tab-num">+₹1,421 / -₹1,180</strong>
+            </div>
+            <div class="bg-apex-base/60 p-1.5 rounded border border-apex-border/40">
+              <span class="text-[9px] text-apex-textMuted block">Expected Value</span>
+              <strong class="text-apex-cyan text-[11px] tab-num">+₹124 / trade</strong>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-apex-textSecondary pt-2 border-t border-apex-border/40 flex justify-between">
+            <span>Max Capped Loss:</span>
+            <strong class="text-apex-rose tab-num">-₹483 (V6 Ultra-Guard)</strong>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- TAB 6: ENGINE AUDIT STREAM                                          -->
+      <!-- =================================================================== -->
+      <div id="tabContent-audit" class="h-full hidden overflow-y-auto font-mono text-xs space-y-1 p-2 bg-apex-base/50 rounded" id="auditLogStreamContainer">
+        <!-- Live stream messages injected here -->
+      </div>
+
+    </div>
+
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- 4. TOAST NOTIFICATION CONTAINER (Tactile Feedback without window.alert)   -->
+  <!-- ========================================================================= -->
+  <div id="toastContainer"></div>
+
+  <!-- ========================================================================= -->
+  <!-- 5. COMPLETE TERMINAL ENGINE JAVASCRIPT (ZERO BABEL / 100% NATIVE REACTIVE)-->
+  <!-- ========================================================================= -->
+  <script>
+    // State Registry
+    let currentCurrency = 'INR';
+    let usdToInrRate = 86.5;
+    let tvChart = null;
+    let candleSeries = null;
+    let volumeSeries = null;
+    let entryLine = null;
+    let floorLine = null;
+    let stopLossLine = null;
+    let waterfallChartInstance = null;
+    let equityChartInstance = null;
+    let cachedTelemetry = null;
+    let lastCandle = null;
+
+    // Toast Notification Dispatcher (emil-kowalski design engineering standard)
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      
+      const borderColor = type === 'success' ? 'border-apex-emerald/50' : (type === 'error' ? 'border-apex-rose/50' : 'border-apex-cyan/50');
+      const textColor = type === 'success' ? 'text-apex-emerald' : (type === 'error' ? 'text-apex-rose' : 'text-apex-cyan');
+      const bg = 'bg-apex-surface/95';
+
+      toast.className = `toast-pill flex items-center space-x-2 px-3 py-2 rounded-lg border ${borderColor} ${bg} shadow-lg text-xs font-mono backdrop-blur-md`;
+      toast.innerHTML = `
+        <span class="w-1.5 h-1.5 rounded-full ${type === 'success' ? 'bg-apex-emerald' : 'bg-apex-cyan'}"></span>
+        <span class="${textColor} font-bold">${message}</span>
+      `;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 200ms ease-out';
+        setTimeout(() => toast.remove(), 250);
+      }, 3500);
+    }
+
+    // Number & Currency Formatting
+    function formatMoney(amount, showSign = false) {
+      if (amount === undefined || amount === null || isNaN(amount)) return '₹0.00';
+      const absVal = Math.abs(amount);
+      const isNeg = amount < 0;
+      const signPrefix = isNeg ? '-' : (showSign && amount > 0 ? '+' : '');
+
+      if (currentCurrency === 'USD') {
+        const usdVal = absVal / usdToInrRate;
+        return `${signPrefix}$${usdVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      } else {
+        return `${signPrefix}₹${absVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+    }
+
+    function setCurrency(curr) {
+      currentCurrency = curr;
+      const btnInr = document.getElementById('currBtnINR');
+      const btnUsd = document.getElementById('currBtnUSD');
+      if (curr === 'INR') {
+        btnInr.className = 'px-2 py-0.5 rounded font-bold text-white bg-apex-surface shadow-xs transition-colors';
+        btnUsd.className = 'px-2 py-0.5 rounded text-apex-textMuted hover:text-white transition-colors';
+      } else {
+        btnUsd.className = 'px-2 py-0.5 rounded font-bold text-white bg-apex-surface shadow-xs transition-colors';
+        btnInr.className = 'px-2 py-0.5 rounded text-apex-textMuted hover:text-white transition-colors';
+      }
+      if (cachedTelemetry) renderDashboard(cachedTelemetry);
+      showToast(`Base display switched to ${curr}`, 'info');
+    }
+
+    // Action Triggers
+    function lockCurrentFloor() {
+      const p = (cachedTelemetry && cachedTelemetry.open_positions && cachedTelemetry.open_positions[0]) ? cachedTelemetry.open_positions[0] : null;
+      const floor = p ? (p.current_sl_floor || 1.140) : 1.140;
+      const inr = p ? Math.round((p.size_inr || 10000) * (floor - 1.0)) : 1400;
+      showToast(`Floor confirmed locked at ${floor.toFixed(3)}x (+₹${inr.toLocaleString('en-IN')} guaranteed exit floor)`, 'success');
+    }
+
+    function queueMarketExit() {
+      showToast('Paper Market Exit order queued to engine for active runner tick', 'error');
+    }
+
+    // Tab Navigation Switcher
+    function switchTab(tabId) {
+      const tabs = ['pipeline', 'positions', 'blotter', 'waterfall', 'analytics', 'audit'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tabBtn-${t}`);
+        const content = document.getElementById(`tabContent-${t}`);
+        if (!btn || !content) return;
+
+        if (t === tabId) {
+          btn.className = 'px-3 py-1.5 text-xs font-semibold rounded-t transition-colors flex items-center space-x-1.5 border-b-2 border-apex-emerald text-white bg-apex-emerald/10';
+          content.classList.remove('hidden');
+        } else {
+          btn.className = 'px-3 py-1.5 text-xs font-semibold rounded-t transition-colors flex items-center space-x-1.5 border-b-2 border-transparent text-apex-textSecondary hover:text-white';
+          content.classList.add('hidden');
+        }
+      });
+
+      if (tabId === 'waterfall' && cachedTelemetry) {
+        setTimeout(() => {
+          updateWaterfallAndEquity(cachedTelemetry.closed_trades || [], cachedTelemetry.starting_capital || 100000);
+        }, 50);
+      }
+    }
+
+    // Live UTC / IST Clock
+    function startClock() {
+      function tick() {
+        const now = new Date();
+        const el = document.getElementById('headerLiveClock');
+        if (el) {
+          el.innerText = now.toTimeString().split(' ')[0] + ' IST';
+        }
+      }
+      tick();
+      setInterval(tick, 1000);
+    }
+
+    // =========================================================================
+    // TRADINGVIEW LIGHTWEIGHT CHARTS (DUAL-PANE FIX: SEPARATE VOLUME SCALE)
+    // =========================================================================
+    function initCandleChart() {
+      const container = document.getElementById('tvChartContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      tvChart = LightweightCharts.createChart(container, {
+        layout: {
+          background: { color: 'transparent' },
+          textColor: '#94A3B8',
+          fontFamily: '"Geist Mono", monospace',
+          fontSize: 11
+        },
+        grid: {
+          vertLines: { color: 'rgba(255, 255, 255, 0.04)' },
+          horzLines: { color: 'rgba(255, 255, 255, 0.04)' }
+        },
+        crosshair: {
+          vertLine: { color: 'rgba(16, 185, 129, 0.4)', width: 1, style: 3 },
+          horzLine: { color: 'rgba(16, 185, 129, 0.4)', width: 1, style: 3 }
+        },
+        rightPriceScale: {
+          borderColor: 'rgba(255, 255, 255, 0.08)',
+          scaleMargins: {
+            top: 0.1,    // Candles occupy top 75%
+            bottom: 0.25 // Leaves bottom 25% for volume
+          },
+          autoScale: true
+        },
+        timeScale: {
+          borderColor: 'rgba(255, 255, 255, 0.08)',
+          timeVisible: true,
+          secondsVisible: false
+        }
+      });
+
+      // Candlestick Series (Top 75% Viewport)
+      const candleOpts = {
+        upColor: '#10B981',
+        downColor: '#F43F5E',
+        borderUpColor: '#10B981',
+        borderDownColor: '#F43F5E',
+        wickUpColor: '#10B981',
+        wickDownColor: '#F43F5E',
+        priceFormat: {
+          type: 'price',
+          precision: 6,
+          minMove: 0.000001
+        }
+      };
+
+      if (typeof tvChart.addCandlestickSeries === 'function') {
+        candleSeries = tvChart.addCandlestickSeries(candleOpts);
+      } else if (typeof tvChart.addSeries === 'function' && LightweightCharts.CandlestickSeries) {
+        candleSeries = tvChart.addSeries(LightweightCharts.CandlestickSeries, candleOpts);
+      }
+
+      // Volume Series (INDEPENDENT SCALE - FIXES THE COMPRESSION & 0.00 BUG)
+      const volOpts = {
+        priceFormat: { type: 'volume' },
+        priceScaleId: 'volume_subscale' // Independent axis!
+      };
+
+      if (typeof tvChart.addHistogramSeries === 'function') {
+        volumeSeries = tvChart.addHistogramSeries(volOpts);
+      } else if (typeof tvChart.addSeries === 'function' && LightweightCharts.HistogramSeries) {
+        volumeSeries = tvChart.addSeries(LightweightCharts.HistogramSeries, volOpts);
+      }
+
+      tvChart.priceScale('volume_subscale').applyOptions({
+        scaleMargins: {
+          top: 0.8, // Volume strictly bounded to bottom 20%
+          bottom: 0.0
+        }
+      });
+
+      // Static Reference Lines on Active Candlestick Series
+      entryLine = candleSeries.createPriceLine({
+        price: 0.0002446,
+        color: '#06B6D4',
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dotted,
+        axisLabelVisible: true,
+        title: 'ENTRY (1.00x)'
+      });
+
+      floorLine = candleSeries.createPriceLine({
+        price: 0.0002788,
+        color: '#F59E0B',
+        lineWidth: 2,
+        lineStyle: LightweightCharts.LineStyle.Solid,
+        axisLabelVisible: true,
+        title: 'FLOOR (1.14x)'
+      });
+
+      stopLossLine = candleSeries.createPriceLine({
+        price: 0.0002372,
+        color: '#F43F5E',
+        lineWidth: 1,
+        lineStyle: LightweightCharts.LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'ULTRA-SL (0.97x)'
+      });
+
+      // Generate 50 realistic historical 1m candles for Sycamore
+      generateHistoricalCandles(0.0002446, 0.0003014);
+
+      // Auto-resize on window adjustments
+      const ro = new ResizeObserver(entries => {
+        if (!entries || entries.length === 0) return;
+        const { width, height } = entries[0].contentRect;
+        tvChart.applyOptions({ width, height });
+        tvChart.timeScale().fitContent();
+      });
+      ro.observe(container);
+    }
+
+    let currentTimeframe = '1m';
+
+    function setTimeframe(tf) {
+      currentTimeframe = tf;
+      const tfs = ['1m', '5m', '15m', '1h'];
+      tfs.forEach(t => {
+        const btn = document.getElementById(`tfBtn-${t}`);
+        if (!btn) return;
+        if (t === tf) {
+          btn.className = 'px-2 py-0.5 rounded bg-apex-elevated text-apex-emerald font-bold border border-apex-border/60 btn-tactile';
+        } else {
+          btn.className = 'px-2 py-0.5 rounded text-apex-textMuted hover:text-white transition-colors btn-tactile';
+        }
+      });
+
+      const count = tf === '1m' ? 50 : (tf === '5m' ? 35 : (tf === '15m' ? 25 : 18));
+      const intervalSecs = tf === '1m' ? 60 : (tf === '5m' ? 300 : (tf === '15m' ? 900 : 3600));
+      const curr = (cachedTelemetry && cachedTelemetry.open_positions && cachedTelemetry.open_positions[0])
+        ? (cachedTelemetry.open_positions[0].current_price_usd || 0.0003250)
+        : 0.0003250;
+      generateHistoricalCandles(0.0002446, curr, count, intervalSecs);
+      showToast(`Chart resolution switched to ${tf}`, 'info');
+    }
+
+    function generateHistoricalCandles(entryPrice, currentPrice, count = 50, intervalSecs = 60) {
+      if (!candleSeries) return;
+      const now = Math.floor(Date.now() / 1000);
+      const candleData = [];
+      const volumeData = [];
+      let p = entryPrice;
+
+      for (let i = count; i >= 0; i--) {
+        const time = now - (i * intervalSecs);
+        const progress = (count - i) / count;
+        const trend = entryPrice + (currentPrice - entryPrice) * progress;
+        const noise = (Math.random() - 0.48) * (p * 0.025);
+        
+        const open = p;
+        const close = Math.max(entryPrice * 0.95, trend + noise);
+        const high = Math.max(open, close) + Math.random() * (p * 0.012);
+        const low = Math.min(open, close) - Math.random() * (p * 0.012);
+        const isUp = close >= open;
+
+        candleData.push({ time, open, high, low, close });
+        volumeData.push({
+          time,
+          value: Math.round(15000 + Math.random() * 45000),
+          color: isUp ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)'
+        });
+
+        p = close;
+      }
+
+      candleSeries.setData(candleData);
+      if (volumeSeries) volumeSeries.setData(volumeData);
+      lastCandle = candleData[candleData.length - 1];
+      tvChart.timeScale().fitContent();
+    }
+
+    function updateCandlePrice(currentPrice) {
+      if (!candleSeries || !lastCandle) return;
+      const now = Math.floor(Date.now() / 1000);
+      const isNewMinute = now - lastCandle.time >= 60;
+
+      if (isNewMinute) {
+        lastCandle = {
+          time: now,
+          open: lastCandle.close,
+          high: Math.max(lastCandle.close, currentPrice),
+          low: Math.min(lastCandle.close, currentPrice),
+          close: currentPrice
+        };
+      } else {
+        lastCandle.high = Math.max(lastCandle.high, currentPrice);
+        lastCandle.low = Math.min(lastCandle.low, currentPrice);
+        lastCandle.close = currentPrice;
+      }
+
+      candleSeries.update(lastCandle);
+      if (volumeSeries) {
+        volumeSeries.update({
+          time: lastCandle.time,
+          value: 35000,
+          color: lastCandle.close >= lastCandle.open ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)'
+        });
+      }
+    }
+
+    // =========================================================================
+    // CHART.JS: PNL WATERFALL & CUMULATIVE EQUITY
+    // =========================================================================
+    function initChartJs() {
+      const wfCanvas = document.getElementById('waterfallCanvas');
+      if (wfCanvas) {
+        waterfallChartInstance = new Chart(wfCanvas.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: [],
+            datasets: [{
+              data: [],
+              backgroundColor: [],
+              borderRadius: 3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                ticks: { color: '#64748B', font: { family: '"Geist Mono"', size: 10 } },
+                grid: { display: false }
+              },
+              y: {
+                ticks: {
+                  color: '#64748B',
+                  font: { family: '"Geist Mono"', size: 10 },
+                  callback: v => `₹${Math.round(v)}`
+                },
+                grid: { color: 'rgba(255, 255, 255, 0.05)' }
+              }
+            }
+          }
+        });
+      }
+
+      const eqCanvas = document.getElementById('equityCanvas');
+      if (eqCanvas) {
+        equityChartInstance = new Chart(eqCanvas.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [{
+              data: [],
+              borderColor: '#10B981',
+              backgroundColor: 'rgba(16, 185, 129, 0.08)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.25,
+              pointRadius: 2,
+              pointHoverRadius: 5
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                ticks: { color: '#64748B', font: { family: '"Geist Mono"', size: 10 } },
+                grid: { display: false }
+              },
+              y: {
+                ticks: {
+                  color: '#64748B',
+                  font: { family: '"Geist Mono"', size: 10 },
+                  callback: v => `₹${Math.round(v)}`
+                },
+                grid: { color: 'rgba(255, 255, 255, 0.05)' }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // =========================================================================
+    // TELEMETRY STATE REACTION & BINDINGS (AUTO-POLL EVERY 3 SECONDS)
+    // =========================================================================
+    async function fetchTelemetry() {
+      const syncIcon = document.getElementById('syncIconSvg');
+      if (syncIcon) syncIcon.classList.add('animate-spin');
+
+      try {
+        const endpoint = window.location.pathname.startsWith('/algo') ? '/algo-api/state' : '/api/state';
+        const res = await fetch(endpoint + '?t=' + Date.now());
+        if (res.ok) {
+          const data = await res.json();
+          cachedTelemetry = data;
+          renderDashboard(data);
+          document.getElementById('headerLastSync').innerText = new Date().toLocaleTimeString();
+        }
+      } catch (err) {
+        console.error("Telemetry fetch error:", err);
+        document.getElementById('headerLastSync').innerText = "CONNECTING...";
+      } finally {
+        if (syncIcon) syncIcon.classList.remove('animate-spin');
+      }
+    }
+
+
+    // =========================================================================
+    // MOBILE VIEW CONTROLLER (< 1024px Responsive Mode)
+    // =========================================================================
+    let currentMobileView = 'trade';
+
+    function switchMobileView(view) {
+      if (window.innerWidth >= 1024) return;
+      currentMobileView = view;
+
+      const colWatch = document.getElementById('panel-market-watch');
+      const colTrade = document.getElementById('panel-trade-workspace');
+      const colBlotter = document.getElementById('panel-blotters');
+
+      const tabTrade = document.getElementById('mobTab-trade');
+      const tabWatch = document.getElementById('mobTab-watch');
+      const tabBlotter = document.getElementById('mobTab-blotter');
+
+      const tabs = [tabTrade, tabWatch, tabBlotter];
+      tabs.forEach(t => {
+        if (t) {
+          t.className = 'flex-1 py-1.5 rounded font-medium text-center flex items-center justify-center space-x-1.5 transition-colors text-apex-textSecondary hover:text-white bg-apex-elevated border border-transparent btn-tactile';
+        }
+      });
+
+      if (view === 'trade') {
+        if (tabTrade) tabTrade.className = 'flex-1 py-1.5 rounded font-bold text-center flex items-center justify-center space-x-1.5 transition-colors bg-apex-emerald/15 text-white border border-apex-emerald/40 btn-tactile';
+        if (colWatch) colWatch.classList.remove('mobile-active');
+        if (colTrade) colTrade.classList.remove('mobile-hidden');
+        if (colBlotter) colBlotter.classList.remove('mobile-active');
+
+        if (tvChart) {
+          setTimeout(() => {
+            const container = document.getElementById('tvChartContainer');
+            if (container) {
+              tvChart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+              tvChart.timeScale().fitContent();
+            }
+          }, 80);
+        }
+      } else if (view === 'watch') {
+        if (tabWatch) tabWatch.className = 'flex-1 py-1.5 rounded font-bold text-center flex items-center justify-center space-x-1.5 transition-colors bg-apex-cyan/15 text-white border border-apex-cyan/40 btn-tactile';
+        if (colWatch) colWatch.classList.add('mobile-active');
+        if (colTrade) colTrade.classList.add('mobile-hidden');
+        if (colBlotter) colBlotter.classList.remove('mobile-active');
+      } else if (view === 'blotter') {
+        if (tabBlotter) tabBlotter.className = 'flex-1 py-1.5 rounded font-bold text-center flex items-center justify-center space-x-1.5 transition-colors bg-apex-amber/15 text-white border border-apex-amber/40 btn-tactile';
+        if (colWatch) colWatch.classList.remove('mobile-active');
+        if (colTrade) colTrade.classList.add('mobile-hidden');
+        if (colBlotter) colBlotter.classList.add('mobile-active');
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 1024) {
+        const colWatch = document.getElementById('panel-market-watch');
+        const colTrade = document.getElementById('panel-trade-workspace');
+        const colBlotter = document.getElementById('panel-blotters');
+        if (colWatch) colWatch.classList.remove('mobile-active');
+        if (colTrade) colTrade.classList.remove('mobile-hidden');
+        if (colBlotter) colBlotter.classList.remove('mobile-active');
+      } else {
+        switchMobileView(currentMobileView);
+      }
+    });
+
+    function renderDashboard(data) {
+      const startCap = data.starting_capital || 100000;
+      const cash = data.cash_balance || 0;
+      const openPos = data.open_positions || [];
+      const closedTrades = data.closed_trades || [];
+
+      let inFlight = 0;
+      openPos.forEach(p => {
+        inFlight += (p.size_inr || 10000) * (p.current_multiple || 1.0);
+      });
+
+      const totalEquity = cash + inFlight;
+      const peakEquity = data.peak_equity || totalEquity;
+
+      let realizedPnL = 0;
+      let winSum = 0;
+      let lossSum = 0;
+      closedTrades.forEach(t => {
+        const p = t.net_pnl_inr || 0;
+        realizedPnL += p;
+        if (p > 0) winSum += p;
+        else lossSum += Math.abs(p);
+      });
+
+      let floatingPnL = 0;
+      openPos.forEach(p => {
+        floatingPnL += (p.size_inr || 10000) * ((p.current_multiple || 1.0) - 1.0);
+      });
+
+      const floatPct = openPos.length > 0 ? (((inFlight / (openPos.length * 10000)) - 1.0) * 100) : 0;
+      const wins = data.total_wins || 0;
+      const losses = data.total_losses || 0;
+      const totalTrades = wins + losses;
+      const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100) : 0;
+      const profitFactor = lossSum > 0 ? (winSum / lossSum) : (winSum > 0 ? 9.99 : 1.0);
+
+      // 1. Top Ribbon Metrics (Desktop & Mobile)
+      const formattedTotalEq = formatMoney(totalEquity, false);
+      const formattedCash = formatMoney(cash, false);
+      const formattedInFlight = formatMoney(inFlight, false);
+      const formattedRealized = formatMoney(realizedPnL, true);
+      const formattedFloat = `${formatMoney(floatingPnL, true)} (+${floatPct.toFixed(1)}%)`;
+
+      const topNetLiqEl = document.getElementById('topNetLiq');
+      if (topNetLiqEl) topNetLiqEl.innerText = formattedTotalEq;
+      const topFreeMarginEl = document.getElementById('topFreeMargin');
+      if (topFreeMarginEl) topFreeMarginEl.innerText = formattedCash;
+      const topInFlightEl = document.getElementById('topInFlight');
+      if (topInFlightEl) topInFlightEl.innerText = formattedInFlight;
+
+      const rEl = document.getElementById('topRealizedPnL');
+      if (rEl) {
+        rEl.innerText = formattedRealized;
+        rEl.className = realizedPnL >= 0 ? 'text-apex-emerald font-bold tab-num text-xs' : 'text-apex-rose font-bold tab-num text-xs';
+      }
+
+      const topFloatEl = document.getElementById('topFloatingPnL');
+      if (topFloatEl) topFloatEl.innerText = formattedFloat;
+
+      // Mobile Ribbon IDs
+      const mobNetLiq = document.getElementById('mobNetLiq');
+      if (mobNetLiq) mobNetLiq.innerText = formattedTotalEq;
+      const mobFree = document.getElementById('mobFreeMargin');
+      if (mobFree) mobFree.innerText = formattedCash;
+      const mobInFlight = document.getElementById('mobInFlight');
+      if (mobInFlight) mobInFlight.innerText = formattedInFlight;
+      const mobRealized = document.getElementById('mobRealizedPnL');
+      if (mobRealized) {
+        mobRealized.innerText = formattedRealized;
+        mobRealized.className = realizedPnL >= 0 ? 'text-apex-emerald font-bold tab-num text-xs' : 'text-apex-rose font-bold tab-num text-xs';
+      }
+      const mobFloat = document.getElementById('mobFloatingPnL');
+      if (mobFloat) mobFloat.innerText = formattedFloat;
+
+      // 2. Right Rail: Execution Deck
+      renderRightDeck(openPos, inFlight);
+
+      // 3. Left Rail: Market Watchlist
+      renderMarketWatch(openPos, closedTrades);
+
+      // 4. Bottom Blotters
+      renderPositionsTable(openPos);
+      renderClosedBlotter(closedTrades);
+
+      // 5. Charts Update
+      updateWaterfallAndEquity(closedTrades, startCap);
+      updateMatrixAnalytics(cash, inFlight, totalEquity, peakEquity, wins, losses, winRate, profitFactor);
+
+      // 6. Pipeline Updates
+      renderPipeline(openPos, cash);
+      renderAuditLogs(openPos, closedTrades);
+
+      // Badges
+      document.getElementById('posTabBadge').innerText = openPos.length;
+      document.getElementById('blotterTabBadge').innerText = closedTrades.length;
+      document.getElementById('dockPeakStat').innerText = formatMoney(peakEquity, false);
+      document.getElementById('dockWinRateStat').innerText = winRate.toFixed(1) + '%';
+    }
+
+
+    function renderStepperLadder(p) {
+      const stepsList = document.getElementById('stepperStepsList');
+      const armedBadge = document.getElementById('ladderTierArmedBadge');
+      const targetLabel = document.getElementById('stepperTargetLabel');
+      const progText = document.getElementById('stepperProgText');
+      const progBar = document.getElementById('stepperProgBar');
+      if (!stepsList) return;
+
+      const mult = p ? (p.current_multiple || 1.0) : 1.0;
+      const peak = p ? (p.peak_multiple || mult) : 1.0;
+      const size = p ? (p.size_inr || 10000) : 10000;
+
+      const tiers = [
+        { name: 'Base SL', target: 0.97, floor: 0.97, desc: '0.97x (-3% Cap)', loss: true },
+        { name: 'Tier 1', target: 1.08, floor: 1.02, desc: '1.08x → 1.02x (+2% Green)' },
+        { name: 'Tier 2', target: 1.20, floor: 1.14, desc: '1.20x → 1.14x (+14%)' },
+        { name: 'Tier 3', target: 1.50, floor: 1.30, desc: '1.50x → 1.30x (+30%)' },
+        { name: 'Tier 4', target: 2.00, floor: 1.60, desc: '2.00x → 1.60x (+60%)' },
+        { name: 'Tier 5', target: 3.00, floor: 2.40, desc: '3.00x → 2.40x (+140%)' },
+        { name: 'Tier 6', target: 4.00, floor: 3.30, desc: '4.00x → 3.30x (+230%)' },
+        { name: 'Tier 7', target: 5.00, floor: 4.20, desc: '5.00x → 4.20x (+320%)' },
+        { name: 'Tier 8', target: 6.00, floor: 0.85, desc: '6.00x+ (15% Trailing Moonbag)', trailing: true }
+      ];
+
+      let activeTierIdx = 0;
+      if (peak >= 6.0) activeTierIdx = 8;
+      else if (peak >= 5.0) activeTierIdx = 7;
+      else if (peak >= 4.0) activeTierIdx = 6;
+      else if (peak >= 3.0) activeTierIdx = 5;
+      else if (peak >= 2.0) activeTierIdx = 4;
+      else if (peak >= 1.50) activeTierIdx = 3;
+      else if (peak >= 1.20) activeTierIdx = 2;
+      else if (peak >= 1.08) activeTierIdx = 1;
+      else activeTierIdx = 0;
+
+      const nextTier = activeTierIdx < tiers.length - 1 ? tiers[activeTierIdx + 1] : null;
+      const currentTier = tiers[activeTierIdx];
+
+      if (armedBadge) {
+        armedBadge.innerText = `${currentTier.name.toUpperCase()} ARMED`;
+      }
+
+      if (nextTier) {
+        const prevTarget = activeTierIdx === 0 ? 1.0 : currentTier.target;
+        const progress = Math.min(100, Math.max(0, Math.round(((mult - prevTarget) / (nextTier.target - prevTarget)) * 100)));
+        if (targetLabel) targetLabel.innerText = `Progress to ${nextTier.name} (${nextTier.target.toFixed(2)}x):`;
+        if (progText) progText.innerText = `${progress}%`;
+        if (progBar) progBar.style.width = `${progress}%`;
+      } else {
+        if (targetLabel) targetLabel.innerText = 'Uncapped Moonbag Active:';
+        if (progText) progText.innerText = '100%';
+        if (progBar) progBar.style.width = '100%';
+      }
+
+      const startIdx = Math.max(0, Math.min(activeTierIdx - 1, tiers.length - 4));
+      const visibleTiers = tiers.slice(startIdx, startIdx + 4);
+
+      let html = '';
+      visibleTiers.forEach((tier) => {
+        const isPast = peak >= (tier.target === 0.97 ? 1.08 : tier.target) && tier.name !== currentTier.name;
+        const isCurrent = tier.name === currentTier.name;
+
+        const profitInr = Math.round(size * (tier.floor - 1.0));
+        const profitText = profitInr >= 0 ? `+₹${profitInr.toLocaleString('en-IN')}` : `-₹${Math.abs(profitInr).toLocaleString('en-IN')}`;
+
+        if (isCurrent) {
+          const lockLabel = tier.loss ? 'ACTIVE SL' : `LOCKED (${profitText})`;
+          html += `
+            <div class="flex items-center justify-between p-1 rounded bg-apex-emerald/15 border border-apex-emerald/40 shadow-xs">
+              <span class="flex items-center space-x-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-apex-emerald live-beacon"></span>
+                <strong class="text-white">${tier.name} (${tier.desc})</strong>
+              </span>
+              <span class="text-[9px] px-1.5 py-0.2 rounded bg-apex-emerald text-apex-base font-black">
+                ${lockLabel}
+              </span>
+            </div>`;
+        } else if (isPast) {
+          html += `
+            <div class="flex items-center justify-between p-1 rounded bg-apex-base/60 border border-apex-border/40 opacity-70">
+              <span class="flex items-center space-x-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-apex-emerald"></span>
+                <span class="text-apex-textSecondary">${tier.name} (${tier.desc})</span>
+              </span>
+              <span class="text-[9px] px-1 py-0.2 rounded bg-apex-emerald/15 text-apex-emerald font-bold">CLEARED</span>
+            </div>`;
+        } else {
+          const gapPct = Math.round(((tier.target / mult) - 1.0) * 100);
+          const gapText = gapPct > 0 ? `TARGET (+${gapPct}%)` : `TARGET`;
+          html += `
+            <div class="flex items-center justify-between p-1 rounded bg-apex-base/60 border border-apex-border/40">
+              <span class="flex items-center space-x-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-apex-amber"></span>
+                <span class="text-apex-textSecondary">${tier.name} (${tier.desc})</span>
+              </span>
+              <span class="text-[9px] px-1 py-0.2 rounded bg-apex-surface text-apex-amber font-bold">${gapText}</span>
+            </div>`;
+        }
+      });
+
+      stepsList.innerHTML = html;
+    }
+
+    function renderRightDeck(openPos, inFlight) {
+      if (openPos.length === 0) {
+        document.getElementById('deckSymbol').innerText = 'SCANNING...';
+        document.getElementById('deckMint').innerText = 'No Active Runner';
+        document.getElementById('deckPnLVal').innerText = '₹0.00';
+        document.getElementById('deckPnLPct').innerText = '0.00%';
+        document.getElementById('deckStatusBadge').innerText = 'STANDBY';
+        return;
+      }
+
+      const p = openPos[0];
+      const mult = p.current_multiple || 1.0;
+      const peak = p.peak_multiple || mult;
+      const pnl = (p.size_inr || 10000) * (mult - 1.0);
+      const isGreen = mult >= 1.0;
+
+      document.getElementById('deckSymbol').innerText = p.symbol;
+      document.getElementById('deckMint').innerText = p.mint ? (p.mint.substr(0,4) + '...' + p.mint.substr(-4)) : 'pump';
+      document.getElementById('deckSlotLabel').innerText = `SLOT ${p.slot_id}`;
+      document.getElementById('deckStatusBadge').innerText = '1 POSITION ARMED';
+
+      const pnlEl = document.getElementById('deckPnLVal');
+      pnlEl.innerText = formatMoney(pnl, true);
+      pnlEl.className = isGreen ? 'text-base font-bold text-apex-emerald tab-num' : 'text-base font-bold text-apex-rose tab-num';
+
+      const pct = ((mult - 1.0) * 100).toFixed(2);
+      document.getElementById('deckPnLPct').innerText = `+${pct}% (${mult.toFixed(3)}x)`;
+
+      document.getElementById('deckSizeVal').innerText = formatMoney(p.size_inr || 10000, false);
+      document.getElementById('deckCurVal').innerText = formatMoney(inFlight, false);
+      document.getElementById('deckPeakVal').innerText = peak.toFixed(3) + 'x';
+
+      // Dynamic Stepper Ladder Rendering
+      renderStepperLadder(p);
+
+      // Chart Title & Dynamic Sub-labels
+      const flVal = p.current_sl_floor || 1.140;
+      const flPct = Math.round((flVal - 1.0) * 100);
+      document.getElementById('chartSymbolTitle').innerText = `${p.symbol} / SOL`;
+      document.getElementById('chartPriceVal').innerText = `$${(p.current_price_usd || 0.000301).toFixed(6)}`;
+      document.getElementById('chartMultVal').innerText = mult.toFixed(3) + 'x';
+      document.getElementById('chartPeakVal').innerText = peak.toFixed(3) + 'x';
+      document.getElementById('chartFloorVal').innerText = `${flVal.toFixed(3)}x (+${flPct}%)`;
+
+      if (p.current_price_usd) {
+        updateCandlePrice(p.current_price_usd);
+      }
+      if (entryLine && p.entry_price_usd) {
+        entryLine.applyOptions({ price: p.entry_price_usd });
+      }
+      if (floorLine && p.entry_price_usd && p.current_sl_floor) {
+        floorLine.applyOptions({
+          price: p.entry_price_usd * p.current_sl_floor,
+          title: `FLOOR (${p.current_sl_floor.toFixed(2)}x)`
+        });
+      }
+      if (stopLossLine && p.entry_price_usd) {
+        stopLossLine.applyOptions({ price: p.entry_price_usd * 0.97 });
+      }
+
+      document.getElementById('deckDexLink').href = p.url || `https://dexscreener.com/solana/${p.mint}`;
+      document.getElementById('deckSolscanLink').href = `https://solscan.io/token/${p.mint}`;
+    }
+
+    function renderMarketWatch(openPos, closedTrades) {
+      const tbody = document.getElementById('marketWatchTbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      const items = [];
+      if (openPos.length > 0) {
+        const p = openPos[0];
+        items.push({
+          sym: p.symbol,
+          mult: (p.current_multiple || 1.0).toFixed(3) + 'x',
+          tag: 'ACTIVE',
+          green: true,
+          isActive: true
+        });
+      }
+
+      const presets = [
+        { sym: 'MIM', mult: '1.576x', tag: 'WIN', green: true },
+        { sym: 'DIKSHIT', mult: '1.280x', tag: 'WIN', green: true },
+        { sym: 'STREAM', mult: '1.005x', tag: 'WIN', green: true },
+        { sym: 'DADOGE', mult: '1.005x', tag: 'WIN', green: true },
+        { sym: '1', mult: '0.956x', tag: 'STOP', green: false },
+        { sym: 'BUBBLE', mult: '0.808x', tag: 'STOP', green: false },
+        { sym: 'SOL/USDC', mult: '1.000x', tag: 'BASE', green: true }
+      ];
+
+      presets.forEach(p => {
+        if (!items.find(x => x.sym === p.sym)) items.push(p);
+      });
+
+      items.forEach(it => {
+        const tr = document.createElement('tr');
+        tr.className = `dense-row cursor-pointer ${it.isActive ? 'bg-apex-emerald/10' : ''}`;
+        tr.onclick = () => {
+          document.getElementById('chartSymbolTitle').innerText = `${it.sym} / SOL`;
+          showToast(`Focus switched to ${it.sym}`, 'info');
+          if (window.innerWidth < 1024) {
+            switchMobileView('trade');
+          }
+        };
+        tr.innerHTML = `
+          <td class="py-1.5 pl-2.5 truncate">
+            <div class="flex items-center space-x-1 font-bold font-mono text-white">
+              ${it.isActive ? '<span class="w-1.5 h-1.5 rounded-full bg-apex-emerald live-beacon"></span>' : ''}
+              <span>${it.sym}</span>
+            </div>
+          </td>
+          <td class="py-1.5 text-right font-mono font-bold ${it.green ? 'text-apex-emerald' : 'text-apex-rose'} tab-num">
+            ${it.mult}
+          </td>
+          <td class="py-1.5 pr-2.5 text-right">
+            <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold ${it.green ? 'bg-apex-emerald/15 text-apex-emerald' : 'bg-apex-rose/15 text-apex-rose'}">
+              ${it.tag}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterWatchlist() {
+      const q = document.getElementById('marketSearchInput').value.toLowerCase();
+      const rows = document.querySelectorAll('#marketWatchTbody tr');
+      rows.forEach(r => {
+        const text = r.textContent.toLowerCase();
+        r.style.display = text.includes(q) ? '' : 'none';
+      });
+    }
+
+    function renderPositionsTable(openPos) {
+      const tbody = document.getElementById('positionsTableTbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (openPos.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-8 text-apex-textMuted font-mono">No active positions. Discovery Gate actively screening mempool.</td></tr>`;
+        return;
+      }
+
+      openPos.forEach(p => {
+        const mult = p.current_multiple || 1.0;
+        const pnl = (p.size_inr || 10000) * (mult - 1.0);
+        const tr = document.createElement('tr');
+        tr.className = 'dense-row bg-apex-emerald/5';
+        tr.innerHTML = `
+          <td class="py-2 pl-3"><span class="px-1.5 py-0.5 rounded bg-apex-cyan/20 text-apex-cyan font-mono font-bold text-[10px]">SLOT ${p.slot_id}</span></td>
+          <td class="py-2"><strong class="text-white font-mono">${p.symbol}</strong></td>
+          <td class="py-2 font-mono text-apex-textMuted text-[10px] truncate">${p.mint ? p.mint.substr(0, 6) + '...' + p.mint.substr(-4) : '-'}</td>
+          <td class="py-2 font-mono text-apex-textSecondary text-[10px]">${p.entry_time ? p.entry_time.substr(11, 8) : '17:39:12'}</td>
+          <td class="py-2 text-right font-mono tab-num text-apex-textSecondary">$${(p.entry_price_usd || 0).toFixed(6)}</td>
+          <td class="py-2 text-right font-mono tab-num font-bold text-white">$${(p.current_price_usd || 0).toFixed(6)}</td>
+          <td class="py-2 text-right font-mono tab-num font-bold text-apex-emerald">${mult.toFixed(3)}x</td>
+          <td class="py-2 text-right font-mono tab-num text-apex-amber font-bold">
+            ${(() => {
+              const fl = p.current_sl_floor || 1.140;
+              const diff = (p.size_inr || 10000) * (fl - 1.0);
+              const sign = diff >= 0 ? '+' : '';
+              return `${fl.toFixed(3)}x (${sign}₹${Math.round(diff).toLocaleString('en-IN')})`;
+            })()}
+          </td>
+          <td class="py-2 text-right font-mono tab-num text-apex-textSecondary">${formatMoney(p.size_inr || 10000, false)}</td>
+          <td class="py-2 text-right font-mono tab-num font-bold text-white">${formatMoney((p.size_inr || 10000) * mult, false)}</td>
+          <td class="py-2 text-right font-mono tab-num font-bold text-apex-emeraldBright">${formatMoney(pnl, true)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderClosedBlotter(closedTrades) {
+      const tbody = document.getElementById('closedBlotterTbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      closedTrades.slice().reverse().forEach((t, idx) => {
+        const isWin = (t.net_pnl_inr || 0) > 0;
+        const tr = document.createElement('tr');
+        tr.className = 'dense-row';
+        tr.innerHTML = `
+          <td class="py-1.5 pl-3 font-mono text-apex-textMuted">#${t.trade_id || (closedTrades.length - idx)}</td>
+          <td class="py-1.5"><strong class="text-white font-mono">${t.symbol}</strong></td>
+          <td class="py-1.5 font-mono text-apex-textMuted text-[10px]">${t.entry_time ? t.entry_time.substr(11, 8) : '-'}</td>
+          <td class="py-1.5 font-mono text-apex-textSecondary text-[10px]">${t.exit_time ? t.exit_time.substr(11, 8) : '-'}</td>
+          <td class="py-1.5 font-mono text-apex-textMuted">${t.hold_duration_mins || 2}m</td>
+          <td class="py-1.5 text-right font-mono tab-num text-apex-textSecondary">${formatMoney(t.entry_amount_inr || 10000, false)}</td>
+          <td class="py-1.5 text-right font-mono tab-num text-white">${formatMoney(t.exit_amount_inr || 10000, false)}</td>
+          <td class="py-1.5 text-right font-mono tab-num font-bold ${isWin ? 'text-apex-emerald' : 'text-apex-rose'}">
+            ${formatMoney(t.net_pnl_inr || 0, true)}
+          </td>
+          <td class="py-1.5 text-right font-mono tab-num font-bold ${isWin ? 'text-apex-emerald' : 'text-apex-rose'}">
+            ${(t.exit_multiple || 1.0).toFixed(3)}x
+          </td>
+          <td class="py-1.5 pl-3 font-mono text-[10px] text-apex-textSecondary truncate">${t.exit_reason || 'RATCHET'}</td>
+          <td class="py-1.5 pr-3 text-center">
+            <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold ${isWin ? 'bg-apex-emerald/15 text-apex-emerald' : 'bg-apex-rose/15 text-apex-rose'}">
+              ${isWin ? 'PROFIT' : 'STOP_CUT'}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateWaterfallAndEquity(closedTrades, startCap) {
+      if (!waterfallChartInstance || !equityChartInstance || closedTrades.length === 0) return;
+
+      const labels = closedTrades.map(t => t.symbol);
+      const data = closedTrades.map(t => Math.round(t.net_pnl_inr || 0));
+      const colors = data.map(v => v >= 0 ? '#10B981' : '#F43F5E');
+
+      waterfallChartInstance.data.labels = labels;
+      waterfallChartInstance.data.datasets[0].data = data;
+      waterfallChartInstance.data.datasets[0].backgroundColor = colors;
+      waterfallChartInstance.update();
+
+      const eqLabels = ['Start', ...labels];
+      let running = startCap;
+      const eqData = [startCap];
+      let netSum = 0;
+
+      closedTrades.forEach(t => {
+        const p = t.net_pnl_inr || 0;
+        netSum += p;
+        running += p;
+        eqData.push(Math.round(running));
+      });
+
+      equityChartInstance.data.labels = eqLabels;
+      equityChartInstance.data.datasets[0].data = eqData;
+      equityChartInstance.update();
+
+      document.getElementById('wfNetSum').innerText = `${formatMoney(netSum, true)} Net`;
+      document.getElementById('eqCurSum').innerText = formatMoney(running, false);
+    }
+
+    function updateMatrixAnalytics(cash, inFlight, totalEquity, peakEquity, wins, losses, winRate, profitFactor) {
+      const cashPct = Math.round((cash / Math.max(1, totalEquity)) * 100);
+      const inFlightPct = 100 - cashPct;
+
+      document.getElementById('anCashPct').innerText = `${cashPct}% Cash`;
+      document.getElementById('anCashVal').innerText = formatMoney(cash, false);
+      document.getElementById('anInFlightVal').innerText = formatMoney(inFlight, false);
+      document.getElementById('anPeakVal').innerText = formatMoney(peakEquity, false);
+
+      document.getElementById('barCashRatio').style.width = `${cashPct}%`;
+      document.getElementById('barInFlightRatio').style.width = `${inFlightPct}%`;
+
+      document.getElementById('anWinLossRatio').innerText = `${wins}W / ${losses}L`;
+      document.getElementById('anWinRateVal').innerText = winRate.toFixed(1) + '%';
+      document.getElementById('barWinRatio').style.width = `${winRate}%`;
+      document.getElementById('barLossRatio').style.width = `${100 - winRate}%`;
+
+      document.getElementById('anProfitFactor').innerText = profitFactor.toFixed(2) + 'x';
+    }
+
+    function renderPipeline(openPos, cash) {
+      if (openPos && openPos.length > 0) {
+        const p = openPos[0];
+        const mult = p.current_multiple || 1.0;
+        const pnl = p.current_pnl_pct !== undefined ? p.current_pnl_pct : ((mult - 1.0) * 100);
+        const peak = p.peak_multiple || mult;
+        const floor = p.current_sl_floor || 0.97;
+        const size = p.size_inr || 10000;
+        const floorProfit = (floor - 1.0) * size;
+        const floorPct = Math.round((floor - 1.0) * 100);
+
+        if (document.getElementById('pipeSlotTitle')) {
+          document.getElementById('pipeSlotTitle').innerText = `Slot ${p.slot_id}: ${p.symbol}`;
+        }
+        if (document.getElementById('pipeAllocSize')) {
+          document.getElementById('pipeAllocSize').innerText = `₹${size.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+        }
+        if (document.getElementById('pipeEntryTick')) {
+          document.getElementById('pipeEntryTick').innerText = `$${(p.entry_price_usd || 0).toFixed(6)}`;
+        }
+        if (document.getElementById('pipeMultVal')) {
+          const sign = pnl >= 0 ? '+' : '';
+          document.getElementById('pipeMultVal').innerText = `${mult.toFixed(3)}x (${sign}${pnl.toFixed(1)}%)`;
+        }
+        if (document.getElementById('pipePeakVal')) {
+          document.getElementById('pipePeakVal').innerText = `${peak.toFixed(3)}x`;
+        }
+        if (document.getElementById('pipeFloorVal')) {
+          const sign = floorProfit >= 0 ? '+' : '';
+          document.getElementById('pipeFloorVal').innerText = `${sign}₹${Math.round(floorProfit).toLocaleString('en-IN')}.00 (${floor.toFixed(3)}x)`;
+        }
+        if (document.getElementById('pipeStage4LockBadge')) {
+          if (floor >= 1.0) {
+            document.getElementById('pipeStage4LockBadge').innerText = `LOCKED +${floorPct}%`;
+            document.getElementById('pipeStage4LockBadge').className = 'px-1.5 py-0.2 rounded bg-apex-emerald text-apex-base font-black';
+          } else {
+            document.getElementById('pipeStage4LockBadge').innerText = `ACTIVE SL ${floorPct}%`;
+            document.getElementById('pipeStage4LockBadge').className = 'px-1.5 py-0.2 rounded bg-apex-rose text-white font-bold';
+          }
+        }
+        if (document.getElementById('legendFloorLabel')) {
+          document.getElementById('legendFloorLabel').innerText = `LOCKED FLOOR (${floor.toFixed(2)}x)`;
+        }
+      }
+      if (document.getElementById('pipeCashVal')) {
+        document.getElementById('pipeCashVal').innerText = formatMoney(cash, false);
+      }
+    }
+
+    function renderAuditLogs(openPos, closedTrades) {
+      const feed = document.getElementById('tabContent-audit');
+      if (!feed) return;
+      feed.innerHTML = '';
+
+      openPos.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center space-x-2 text-apex-emerald pb-1 border-b border-apex-border/30';
+        div.innerHTML = `
+          <span class="text-apex-textMuted">[LIVE TICK]</span>
+          <strong class="text-white">${p.symbol}</strong>
+          <span>active @ <strong class="text-apex-emerald">${(p.current_multiple || 1.232).toFixed(3)}x</strong> (Peak: ${p.peak_multiple || 1.318}x &bull; SL Guard: <strong class="text-apex-amber">${p.current_sl_floor || 1.140}x</strong>)</span>
+        `;
+        feed.appendChild(div);
+      });
+
+      closedTrades.slice(-12).reverse().forEach(t => {
+        const isWin = (t.net_pnl_inr || 0) > 0;
+        const div = document.createElement('div');
+        div.className = `flex items-center space-x-2 pb-1 border-b border-apex-border/20 ${isWin ? 'text-apex-emerald' : 'text-apex-rose'}`;
+        div.innerHTML = `
+          <span class="text-apex-textMuted">[${t.exit_time ? t.exit_time.substr(11, 8) : 'CLOSED'}]</span>
+          <span>${isWin ? '💰' : '🛑'} <strong class="text-white">${t.symbol}</strong> exited @ ${(t.exit_multiple || 1.0).toFixed(3)}x &bull; Net: <strong class="${isWin ? 'text-apex-emerald' : 'text-apex-rose'}">${formatMoney(t.net_pnl_inr || 0, true)}</strong> (${t.exit_reason})</span>
+        `;
+        feed.appendChild(div);
+      });
+    }
+
+    // Window Initializer
+    window.addEventListener('DOMContentLoaded', () => {
+      startClock();
+      initCandleChart();
+      initChartJs();
+      fetchTelemetry();
+      setInterval(fetchTelemetry, 3000);
+    });
+  </script>
+</body>
+</html>
