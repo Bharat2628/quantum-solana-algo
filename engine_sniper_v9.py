@@ -192,7 +192,10 @@ def get_v9_ratchet_sl(peak_mult: float, prev_sl: float) -> Tuple[float, str]:
     elif peak_mult >= 1.10:
         sl = 1.055
         label = "BREAKEVEN_GUARD (+5.5% Net Green @ 1.055x)"
-    elif peak_mult >= 1.05:
+    elif peak_mult >= 1.055:
+        sl = 1.015
+        label = "BREAKEVEN_GUARD (+1.5% Friction Guard @ 1.015x)"
+    elif peak_mult >= 1.035:
         sl = 0.98
         label = "SOFT_GUARD (-2% floor @ 0.98x)"
     else:
