@@ -64,8 +64,9 @@ STAGNATION_TIMEOUT_SEC = 900.0      # V9: 15 minutes runway
 STAGNATION_PEAK_THRESHOLD = 1.08    # Only cut if peak never crossed +8%
 POLL_INTERVAL_SEC = 10
 
-STATE_FILE = "/root/engine_v3_nochase/engine_sniper_state.json"
-LOG_FILE = "/root/engine_v3_nochase/engine_sniper.log"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATE_FILE = os.path.join(BASE_DIR, "engine_sniper_state.json")
+LOG_FILE = os.path.join(BASE_DIR, "engine_sniper.log")
 
 EXCLUDED_MINTS = {
     "So11111111111111111111111111111111111111112",
