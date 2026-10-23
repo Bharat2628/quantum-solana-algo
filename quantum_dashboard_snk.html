@@ -1364,6 +1364,10 @@
             const r2 = await fetch(`api/${ep}`);
             if (r2.ok) return await r2.json();
           } catch(e) {}
+          try {
+            const r3 = await fetch(`/${ep}_state.json`);
+            if (r3.ok) return await r3.json();
+          } catch(e) {}
           return null;
         };
 
