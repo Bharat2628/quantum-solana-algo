@@ -57,7 +57,7 @@ SIMULATED_SLIPPAGE_PCT = 0.015     # 1.5% slippage
 ESTIMATED_GAS_INR = 37.50          # Priority fee
 
 # Calibrated Positive Expectancy Discovery Gates ($32k-$70k Golden Pocket)
-MIN_LIQUIDITY_USD = 32_000.0       # Eliminates sub-$32k illiquid slippage traps
+MIN_LIQUIDITY_USD = 40_000.0       # Eliminates sub-$32k illiquid slippage traps
 MAX_LIQUIDITY_USD = 70_000.0       # Eliminates >$70k whale distribution dump pools (e.g. CAPYGLOW $84k)
 MIN_24H_VOLUME_USD = 40_000.0      # $40k 24h volume
 MIN_MARKET_CAP_USD = 80_000.0      # $80k market cap
@@ -72,7 +72,7 @@ MIN_M5_BUYS = 8                    # At least 8 distinct buys in last 5m
 MIN_M5_PRICE_CHANGE_PCT = 3.0      # Reject weak chop (< +3.0%)
 MAX_M5_PRICE_CHANGE_PCT = 5.8      # Reject blown-off pump exhaustion (> +5.8%)
 MIN_M5_BUY_SELL_RATIO = 1.25       # Buyers must dominate sellers by 25% in last 5m
-MAX_H1_DROP_PCT = -12.0            # Allows normal pullbacks, rejects waterfall collapses (> -12% in 1 hour)
+MAX_H1_DROP_PCT = 0.0            # Allows normal pullbacks, rejects waterfall collapses (> -12% in 1 hour)
 
 # Anti-Chop Re-Entry Protection
 REENTRY_COOLDOWN_SEC = 7200.0      # 120-minute cooldown (up from 60m)
