@@ -82,7 +82,7 @@ def compute_config_fingerprint(cfg: dict) -> str:
 
 CONFIG_FINGERPRINT = compute_config_fingerprint(STRICT_CONFIG)
 
-DATA_DIR = os.environ.get("PAPER_DATA_DIR", "/opt/paper_validation")
+DATA_DIR = os.environ.get("PAPER_DATA_DIR", os.path.dirname(os.path.abspath(__file__)))
 
 def ensure_data_dir():
     try:
