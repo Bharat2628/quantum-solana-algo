@@ -22,9 +22,13 @@ import json
 from datetime import datetime, timezone
 
 # Import Engines
+import sqlite3
 import engine_sniper_v9
 import engine_v3_nochase_vps_fresh
 import engine_polymarket_arb
+if "PAPER_DATA_DIR" not in os.environ:
+    os.environ["PAPER_DATA_DIR"] = os.path.dirname(os.path.abspath(__file__))
+import stage_d_paper_harness
 
 PORT = int(os.environ.get("PORT", 5000))
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "snk_apex_quantum_2026")
@@ -34,6 +38,47 @@ DASHBOARD_FILE = os.path.join(BASE_DIR, "quantum_dashboard_snk.html")
 STATE_FILE_V3 = os.path.join(BASE_DIR, "engine_v3_state.json")
 STATE_FILE_SNIPER = os.path.join(BASE_DIR, "engine_sniper_state.json")
 STATE_FILE_POLY = os.path.join(BASE_DIR, "engine_polymarket_state.json")
+PAPER_DB = os.path.join(BASE_DIR, "paper_store.db")
+
+def get_paper_state_json():
+    try:
+        if not os.path.exists(PAPER_DB):
+            return json.dumps({
+                "engine_name": "Quantum Stage D Paper Validation (v1.4.1-PATCHED)",
+                "starting_capital_inr": 25000.0,
+                "cash_balance_inr": 25000.0,
+                "peak_equity_inr": 25000.0,
+                "consecutive_losses": 0,
+                "is_draining": False,
+                "is_stopped": False,
+                "stop_reason": "",
+                "open_positions": [],
+                "closed_trades": []
+            }).encode('utf-8')
+        conn = sqlite3.connect(PAPER_DB, timeout=5.0)
+        cur = conn.cursor()
+        meta = dict(cur.execute("SELECT key, value FROM engine_meta").fetchall())
+        cur.execute("SELECT * FROM closed_trades ORDER BY trade_num ASC")
+        trades = [dict(zip([d[0] for d in cur.description], row)) for row in cur.fetchall()]
+        cur.execute("SELECT * FROM open_positions")
+        open_pos = [dict(zip([d[0] for d in cur.description], row)) for row in cur.fetchall()]
+        conn.close()
+
+        paper_state = {
+            "engine_name": "Quantum Stage D Paper Validation (v1.4.1-PATCHED)",
+            "starting_capital_inr": 25000.0,
+            "cash_balance_inr": float(meta.get("cash_balance_inr", 25000.0)),
+            "peak_equity_inr": float(meta.get("peak_equity_inr", 25000.0)),
+            "consecutive_losses": int(meta.get("consecutive_losses", 0)),
+            "is_draining": meta.get("is_draining") == "1",
+            "is_stopped": meta.get("is_stopped") == "1",
+            "stop_reason": meta.get("stop_reason", ""),
+            "open_positions": open_pos,
+            "closed_trades": trades
+        }
+        return json.dumps(paper_state).encode('utf-8')
+    except Exception as e:
+        return json.dumps({"error": str(e)}).encode('utf-8')
 
 # Daemons tracking
 daemons = {}
@@ -159,7 +204,8 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
             mapping = {
                 "v9": os.path.join(BASE_DIR, "engine_sniper.log"),
                 "v7": os.path.join(BASE_DIR, "engine_v3.log"),
-                "poly": os.path.join(BASE_DIR, "engine_polymarket.log")
+                "poly": os.path.join(BASE_DIR, "engine_polymarket.log"),
+                "paper": os.path.join(BASE_DIR, "paper_engine.log")
             }
             targets = [target] if target in mapping else mapping.keys()
             for t in targets:
@@ -229,7 +275,18 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # -------------------------------------------------------------
-        # 3. Polymarket State
+        # 3. Stage D Paper State
+        # -------------------------------------------------------------
+        elif clean_path in ["/api/paper", "/algo/api/paper", "/api/paper_state", "/algo/api/paper_state"]:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(get_paper_state_json())
+            return
+
+        # -------------------------------------------------------------
+        # 4. Polymarket State
         # -------------------------------------------------------------
         elif clean_path in ["/api/polymarket", "/algo/api/polymarket", "/api/polymarket_state", "/algo/api/polymarket_state"]:
             self.send_response(200)
@@ -295,6 +352,10 @@ if __name__ == "__main__":
     # Launch Engine 3: Polymarket Strict Binary Arbitrage
     t3 = threading.Thread(target=daemon_wrapper, args=("Polymarket Binary Arbitrage", engine_polymarket_arb.main), daemon=True)
     t3.start()
+
+    # Launch Engine 4: Stage D Independent Paper Validation (v1.4.1-PATCHED)
+    t4 = threading.Thread(target=daemon_wrapper, args=("Stage D Paper Validation", stage_d_paper_harness.main), daemon=True)
+    t4.start()
 
     print(f"🚀 SNK Quant Fleet Master Server running on port {PORT}", flush=True)
     print(f"🔒 Direct Remote Admin API active on /algo-admin/ with token authentication", flush=True)

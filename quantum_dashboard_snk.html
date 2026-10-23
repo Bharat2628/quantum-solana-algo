@@ -262,6 +262,10 @@
           <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--purple);"></span>
           <span>Polymarket</span>
         </div>
+        <div id="tab-paper" class="nav-tab" onclick="switchTab('paper')">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #ffaa00;"></span>
+          <span>Stage D Paper</span>
+        </div>
         <div id="tab-blotter" class="nav-tab" onclick="openBlottersModal()">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           <span>Trade History</span>
@@ -581,6 +585,12 @@
         <div style="display: flex; align-items: center; gap: 12px;">
           <span style="font-size: 16px; font-weight: 700; color: #FFFFFF;">SNK TRADING | Realized Trade Ledger</span>
           <span id="modalTradeCount" style="background: var(--bg-inset); padding: 3px 9px; border-radius: 9999px; font-size: 11px; font-family: 'Geist Mono', monospace; color: var(--cyan);">301 Total Trades</span>
+          <div style="display: flex; gap: 6px; margin-left: 14px;">
+            <button id="modalFilterAll" onclick="setBlotterFilter('all')" style="padding: 3px 9px; font-size: 11px; font-family: 'Geist Mono', monospace; border-radius: 9999px; background: var(--cyan); color: #000; font-weight: 700; border: none; cursor: pointer;">ALL</button>
+            <button id="modalFilterV7" onclick="setBlotterFilter('v7')" style="padding: 3px 9px; font-size: 11px; font-family: 'Geist Mono', monospace; border-radius: 9999px; background: var(--bg-inset); color: var(--text-gray); border: 1px solid var(--border); cursor: pointer;">V7</button>
+            <button id="modalFilterV9" onclick="setBlotterFilter('v9')" style="padding: 3px 9px; font-size: 11px; font-family: 'Geist Mono', monospace; border-radius: 9999px; background: var(--bg-inset); color: var(--text-gray); border: 1px solid var(--border); cursor: pointer;">V9</button>
+            <button id="modalFilterPaper" onclick="setBlotterFilter('paper')" style="padding: 3px 9px; font-size: 11px; font-family: 'Geist Mono', monospace; border-radius: 9999px; background: var(--bg-inset); color: #ffaa00; border: 1px solid var(--border); cursor: pointer;">PAPER</button>
+          </div>
         </div>
         <button onclick="closeBlottersModal()" style="background: transparent; border: none; color: var(--text-gray); font-size: 18px; cursor: pointer; padding: 4px 8px;">✕</button>
       </div>
@@ -629,6 +639,8 @@
     let v7Data = null;
     let sniperData = null;
     let polyData = null;
+    let paperData = null;
+    let currentBlotterFilter = 'all';
 
     // Currency Formatter
     const fmtINR = (n) => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 });
@@ -802,6 +814,63 @@
 
         drawMainChartForTrades([]);
 
+      } else if (currentTab === 'paper') {
+        // --- STAGE D PAPER VALIDATION ACTIVE ---
+        document.getElementById('tickerEngineTitle').innerText = 'STAGE D PAPER VALIDATION';
+        document.getElementById('tickerEngineSubtitle').innerText = 'Forward Validation Sandbox (v1.4.1-PATCHED)';
+        document.getElementById('badgeIconBox').innerText = '🧪';
+
+        const cap = Number(paperData?.starting_capital_inr || 25000);
+        const cash = Number(paperData?.cash_balance_inr || 25000);
+        const pnl = cash - cap;
+        const paperTrades = paperData?.closed_trades || [];
+
+        document.getElementById('tickerCapital').innerText = currency === 'INR' ? fmtINR(cap) : fmtUSD(cap / 84);
+        document.getElementById('tickerCash').innerText = currency === 'INR' ? fmtINR(cash) : fmtUSD(cash / 84);
+        document.getElementById('tickerPnL').innerText = (pnl >= 0 ? '+' : '') + (currency === 'INR' ? fmtINR(pnl) : fmtUSD(pnl / 84));
+        document.getElementById('tickerPnL').style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+        document.getElementById('tickerTrades').innerText = `${paperTrades.length} / 30 Trades`;
+
+        const wins = paperTrades.filter(t => (t.net_pnl_inr || 0) > 0).length;
+        const losses = paperTrades.length - wins;
+        const winRate = paperTrades.length > 0 ? (wins / paperTrades.length) * 100 : 0;
+        updateWinRateBar(winRate, wins, losses);
+
+        const openPositions = paperData?.open_positions || [];
+        if (openPositions.length > 0) {
+          const first = openPositions[0];
+          document.getElementById('tickerActivePos').innerText = `${openPositions.length} Active (${first.symbol})`;
+          document.getElementById('runnerTokenSymbol').innerText = first.symbol;
+          document.getElementById('runnerMultiple').innerText = `${(first.current_multiple || 1).toFixed(2)}x`;
+          document.getElementById('runnerPnlInr').innerText = '₹0.00';
+          document.getElementById('runnerSubtext').innerText = first.current_sl_label || 'Paper Slot Active';
+          document.getElementById('runnerPulse').innerText = 'PAPER ACTIVE';
+        } else {
+          document.getElementById('tickerActivePos').innerText = '0 Open (Scanning)';
+          document.getElementById('runnerTokenSymbol').innerText = 'Paper Sandbox Idle';
+          document.getElementById('runnerMultiple').innerText = '--';
+          document.getElementById('runnerPnlInr').innerText = '₹0.00';
+          const consec = paperData?.consecutive_losses || 0;
+          const peakDD = Math.max(0, Number(paperData?.peak_equity_inr || 25000) - cash);
+          document.getElementById('runnerSubtext').innerText = `Loss Streak: ${consec}/7 | Peak DD: ₹${peakDD.toFixed(2)}`;
+          document.getElementById('runnerPulse').innerText = 'MONITORING';
+        }
+
+        // Deck Updates
+        document.getElementById('deckEngineHeader').innerText = 'STAGE D PAPER ENGINE';
+        document.getElementById('deckEngineName').innerText = 'Simulated Validation Engine';
+        document.getElementById('deckCashVal').innerText = currency === 'INR' ? fmtINR(cash) : fmtUSD(cash / 84);
+        document.getElementById('deckCapBadge').innerText = '₹3,000 / trade';
+        document.getElementById('paramTP').innerText = 'Breakeven Guard @ 1.015x';
+        document.getElementById('paramSL').innerText = 'Dynamic Liquidity Floor';
+        document.getElementById('paramStag').innerText = '6m (360s) Stagnation Cut';
+
+        document.getElementById('chartPrimaryVal').innerText = (pnl >= 0 ? '+' : '') + (currency === 'INR' ? fmtINR(pnl) : fmtUSD(pnl / 84));
+        document.getElementById('chartSecondaryVal').innerText = `${((pnl / cap) * 100).toFixed(2)}% Realized Paper Return`;
+        document.getElementById('chartSecondaryVal').style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+        drawMainChartForTrades(paperTrades);
+
       } else {
         // --- OVERVIEW (COMBINED FLEET) ---
         document.getElementById('tickerEngineTitle').innerText = 'COMBINED FLEET';
@@ -862,7 +931,7 @@
       }
 
       // Populate Modal Blotter
-      populateBlotterModal(allTrades);
+      populateBlotterModal();
     }
 
     function updateWinRateBar(winRate, wins, losses) {
@@ -1206,28 +1275,73 @@
       document.getElementById('blotterModal').style.display = 'none';
     }
 
-    function populateBlotterModal(trades) {
-      if (!trades || trades.length === 0) return;
-      document.getElementById('modalTradeCount').innerText = `${trades.length} Total Trades`;
+    function setBlotterFilter(filter) {
+      currentBlotterFilter = filter;
+      ['modalFilterAll', 'modalFilterV7', 'modalFilterV9', 'modalFilterPaper'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.style.background = 'var(--bg-inset)';
+          el.style.color = 'var(--text-gray)';
+          el.style.fontWeight = '400';
+          el.style.border = '1px solid var(--border)';
+        }
+      });
+      const activeBtn = filter === 'all' ? document.getElementById('modalFilterAll') :
+                        filter === 'v7' ? document.getElementById('modalFilterV7') :
+                        filter === 'v9' ? document.getElementById('modalFilterV9') :
+                        document.getElementById('modalFilterPaper');
+      if (activeBtn) {
+        activeBtn.style.background = filter === 'paper' ? '#ffaa00' : 'var(--cyan)';
+        activeBtn.style.color = '#000';
+        activeBtn.style.fontWeight = '700';
+        activeBtn.style.border = 'none';
+      }
+      populateBlotterModal();
+    }
 
-      const rows = trades.slice(-50).reverse().map((t, idx) => {
+    function populateBlotterModal() {
+      const v7Trades = (v7Data?.closed_trades || []).map(t => ({...t, _engine: 'V7 Gravitas', _engineKey: 'v7'}));
+      const v9Trades = (sniperData?.closed_trades || []).map(t => ({...t, _engine: 'V9 Runner', _engineKey: 'v9'}));
+      const paperTrades = (paperData?.closed_trades || []).map(t => ({...t, _engine: 'Stage D Paper', _engineKey: 'paper'}));
+
+      let allTrades = [...v7Trades, ...v9Trades, ...paperTrades];
+      allTrades.sort((a, b) => new Date(a.exit_time || 0) - new Date(b.exit_time || 0));
+
+      let filtered = allTrades;
+      if (currentBlotterFilter !== 'all') {
+        filtered = allTrades.filter(t => t._engineKey === currentBlotterFilter);
+      }
+
+      const totalCount = allTrades.length;
+      document.getElementById('modalTradeCount').innerText = `${filtered.length} / ${totalCount} Trades (${currentBlotterFilter.toUpperCase()})`;
+
+      if (filtered.length === 0) {
+        document.getElementById('blotterModalRows').innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);">No closed trades recorded under this filter.</td></tr>`;
+        return;
+      }
+
+      const rows = filtered.slice(-100).reverse().map((t, idx) => {
         const isWin = (t.net_pnl_inr || 0) > 0;
-        const engineTag = t.size_inr > 5000 ? 'V7 Gravitas' : 'V9 Runner';
         const color = isWin ? 'var(--green)' : 'var(--red)';
         const exitTimeStr = t.exit_time ? new Date(t.exit_time).toLocaleTimeString() : '--';
+        let engineColor = 'var(--cyan)';
+        if (t._engineKey === 'v9') engineColor = 'var(--green)';
+        else if (t._engineKey === 'paper') engineColor = '#ffaa00';
+
+        const mintUrl = t.mint ? `https://dexscreener.com/solana/${t.mint}` : '#';
 
         return `
           <tr style="border-bottom: 1px solid var(--border);">
             <td style="padding: 7px 4px; color: var(--text-muted);">${t.trade_num || idx + 1}</td>
-            <td style="padding: 7px 4px; color: var(--cyan); font-weight: 600;">${engineTag}</td>
+            <td style="padding: 7px 4px; color: ${engineColor}; font-weight: 600;">${t._engine || 'Engine'}</td>
             <td style="padding: 7px 4px; color: var(--text-gray);">${exitTimeStr}</td>
             <td style="padding: 7px 4px; font-weight: 700; color: #FFFFFF;">${t.symbol || 'TOKEN'}</td>
-            <td style="padding: 7px 4px;">₹${Number(t.size_inr || 1000).toLocaleString()}</td>
+            <td style="padding: 7px 4px;">₹${Number(t.size_inr || 3000).toLocaleString()}</td>
             <td style="padding: 7px 4px; color: ${color}; font-weight: 600;">${(t.exit_multiple || 1).toFixed(2)}x</td>
             <td style="padding: 7px 4px; font-weight: 700; color: ${color};">${(t.net_pnl_inr || 0) >= 0 ? '+' : ''}₹${Number(t.net_pnl_inr || 0).toFixed(2)}</td>
             <td style="padding: 7px 4px; color: var(--text-muted); font-size: 11px;">${(t.exit_reason || '').slice(0, 38)}</td>
             <td style="padding: 7px 4px; text-align: right;">
-              <a href="https://dexscreener.com/solana/${t.mint}" target="_blank" style="color: var(--cyan); text-decoration: none; font-weight: 600;">Chart ↗</a>
+              <a href="${mintUrl}" target="_blank" style="color: var(--cyan); text-decoration: none; font-weight: 600;">Chart ↗</a>
             </td>
           </tr>
         `;
@@ -1253,15 +1367,17 @@
           return null;
         };
 
-        const [v7, sniper, poly] = await Promise.all([
+        const [v7, sniper, poly, paper] = await Promise.all([
           fetchJSON('state'),
           fetchJSON('sniper'),
-          fetchJSON('polymarket')
+          fetchJSON('polymarket'),
+          fetchJSON('paper')
         ]);
 
         if (v7) v7Data = v7;
         if (sniper) sniperData = sniper;
         if (poly) polyData = poly;
+        if (paper) paperData = paper;
 
         renderActiveTab();
       } catch (err) {
