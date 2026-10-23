@@ -35,21 +35,22 @@ from typing import Dict, List, Set, Tuple
 # Configuration
 TOTAL_CAPITAL_INR = 25_000.0
 SLOT_SIZE_INR = 1_000.0
-MAX_CONCURRENT_SLOTS = 8
+MAX_CONCURRENT_SLOTS = 4            # Calibrated 4 concurrent slots
 ESTIMATED_FEES_INR = 25.0
 
 # ============================================================================
-# TIER 1: DISCOVERY GATES (Calibrated to Real On-Chain Liquidity)
+# TIER 1: DISCOVERY GATES (Calibrated to Real On-Chain Liquidity: $32k - $70k)
 # ============================================================================
-MIN_LIQUIDITY_USD = 30_000.0        # Hard $30k floor (eliminates 78% of past dead trades)
-MAX_LIQUIDITY_USD = 500_000.0       # Ceiling for micro-cap runners
-MAX_MARKET_CAP_USD = 800_000.0      # Captures genuine early breakout runners (like aDOGymous $380k MC)
+MIN_LIQUIDITY_USD = 32_000.0        # Hard $32k floor
+MAX_LIQUIDITY_USD = 70_000.0        # Hard $70k ceiling (strictly blocks whale distribution pools)
+MAX_MARKET_CAP_USD = 800_000.0      # Captures genuine early breakout runners
 MIN_5M_VOLUME_USD = 3_500.0         # Active 5m volume floor
 MIN_24H_VOLUME_USD = 20_000.0       # Minimum 24h track record
 MIN_BUY_SELL_RATIO = 1.25           # Buys must lead sells by at least 25%
 
-# TIER 1: CHASE CEILING — Calibrated to 20%
-MAX_M5_PRICE_CHANGE_PCT = 20.0      # Breakout candles up to +20%
+# TIER 1: MOMENTUM GATES (+3.0% to +5.8% Breakout Window)
+MIN_M5_PRICE_CHANGE_PCT = 3.0       # Green breakout candle floor
+MAX_M5_PRICE_CHANGE_PCT = 5.8       # Strict no-chase ceiling
 
 # TIER 3: VOLUME-TO-LIQUIDITY RATIO — Demand Filter
 MIN_VOL_LIQ_RATIO = 0.15            # 5m volume must be >15% of pool liquidity (real accumulation pace)
@@ -189,8 +190,8 @@ def get_v9_ratchet_sl(peak_mult: float, prev_sl: float) -> Tuple[float, str]:
         sl = 1.15
         label = "PROFIT_LOCK (+15% floor @ 1.15x)"
     elif peak_mult >= 1.10:
-        sl = 1.03
-        label = "BREAKEVEN_GUARD (+3% Net Green @ 1.03x)"
+        sl = 1.055
+        label = "BREAKEVEN_GUARD (+5.5% Net Green @ 1.055x)"
     elif peak_mult >= 1.05:
         sl = 0.98
         label = "SOFT_GUARD (-2% floor @ 0.98x)"
@@ -375,14 +376,9 @@ def evaluate_candidates_v9(mints: List[str], existing_mints: Set[str], stopped_o
                 vol_m5 = float(primary.get("volume", {}).get("m5") or 0.0)
                 
                 # ============================================================
-                # GATE 1: CHASE CEILING — Allow breakout candles up to +25%
-                # V8 had 8% which killed PIERRE (+2,994%), UHI (+2,193%) etc.
+                # GATE 1 & 2: MOMENTUM WINDOW (+3.0% to +5.8% Breakout)
                 # ============================================================
-                if m5_pc > MAX_M5_PRICE_CHANGE_PCT:
-                    continue
-                
-                # GATE 2: GREEN CANDLE — Must be positive in 5m
-                if m5_pc < 0.5:
+                if m5_pc > MAX_M5_PRICE_CHANGE_PCT or m5_pc < MIN_M5_PRICE_CHANGE_PCT:
                     continue
                 
                 # GATE 3: TREND — Not in waterfall collapse
@@ -573,7 +569,9 @@ def run_sniper_cycle(state: dict):
 
             if should_exit:
                 if "SL_" in exit_reason:
-                    effective_exit_mult = mult if mult < 0.50 else max(mult, round(pos["current_sl_floor"] * 0.985, 4))
+                    # Simulated on-chain stop execution floor: protects capital at max(current_sl_floor * 0.985, 0.88)
+                    effective_floor = max(round(pos["current_sl_floor"] * 0.985, 4), 0.88)
+                    effective_exit_mult = max(mult, effective_floor) if pos["current_sl_floor"] >= 0.90 else mult
                 else:
                     effective_exit_mult = round(mult * 0.985, 4)
 

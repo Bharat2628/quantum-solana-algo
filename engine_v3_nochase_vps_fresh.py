@@ -44,20 +44,21 @@ STATE_FILE = os.path.join(BASE_DIR, "engine_v3_state.json")
 LOG_FILE = os.path.join(BASE_DIR, "engine_v3.log")
 
 TOTAL_CAPITAL_INR = 100_000.0
-MAX_CONCURRENT_SLOTS = 8
-TRADE_SIZE_INR = 10_000.0          # ₹10,000 per slot (8 slots = ₹80,000 max, ₹20,000 reserve)
-TARGET_LIFECYCLE_TRADES = 500       # Expanded to 500 lifecycle trades
+MAX_CONCURRENT_SLOTS = 4          # Calibrated 4-slot portfolio
+TRADE_SIZE_INR = 3_000.0           # Calibrated ₹3,000 per slot (4 slots = ₹12,000 max, ₹88,000 reserve)
+TARGET_LIFECYCLE_TRADES = 500      # Expanded to 500 lifecycle trades
 
 # Dynamic Liquidity-Scaled Stop-Loss (Calibrated to Solana Volatility)
-HARD_SL_PCT_LOW_LIQ = 0.055        # -5.5% SL for pools < $40k (widened from 3.5% to avoid whipsaws)
-HARD_SL_PCT_HIGH_LIQ = 0.075       # -7.5% Buffer SL for pools >= $40k (widened from 5.5%)
+HARD_SL_PCT_LOW_LIQ = 0.055        # -5.5% SL for pools < $40k
+HARD_SL_PCT_HIGH_LIQ = 0.075       # -7.5% Buffer SL for pools >= $40k
 LIQUIDITY_TIER_THRESHOLD_USD = 40_000.0
 
 SIMULATED_SLIPPAGE_PCT = 0.015     # 1.5% slippage
 ESTIMATED_GAS_INR = 37.50          # Priority fee
 
-# Calibrated Quantitative Discovery Gates
-MIN_LIQUIDITY_USD = 30_000.0       # $30k pool minimum floor (eliminates sub-$30k illiquid traps)
+# Calibrated Positive Expectancy Discovery Gates ($32k-$70k Golden Pocket)
+MIN_LIQUIDITY_USD = 32_000.0       # Eliminates sub-$32k illiquid slippage traps
+MAX_LIQUIDITY_USD = 70_000.0       # Eliminates >$70k whale distribution dump pools (e.g. CAPYGLOW $84k)
 MIN_24H_VOLUME_USD = 40_000.0      # $40k 24h volume
 MIN_MARKET_CAP_USD = 80_000.0      # $80k market cap
 MIN_VOL_TO_MC_RATIO = 0.80         # Volume-to-MC ratio
@@ -65,11 +66,11 @@ MIN_BUY_SELL_RATIO = 0.75
 MIN_AGE_HOURS = 0.50               # 30 mins minimum (allows fresh launchpad runners)
 MAX_AGE_HOURS = 72.0               # Reject stale coins
 
-# 5-Minute Velocity & Momentum Gates
-MIN_M5_VOLUME_USD = 3_500.0        # At least $3.5k volume in last 5m (active capital flow)
-MIN_M5_BUYS = 8                    # At least 8 distinct buys in last 5m (broad buyer base)
-MIN_M5_PRICE_CHANGE_PCT = 0.7      # At least +0.7% in last 5m (Green candle)
-MAX_M5_PRICE_CHANGE_PCT = 8.0      # Maximum +8.0% in last 5m (Strict No-Chase ceiling: Rejects blown-off pumps!)
+# 5-Minute Velocity & Momentum Gates (+3.0% to +5.8% Breakout Window)
+MIN_M5_VOLUME_USD = 3_500.0        # At least $3.5k volume in last 5m
+MIN_M5_BUYS = 8                    # At least 8 distinct buys in last 5m
+MIN_M5_PRICE_CHANGE_PCT = 3.0      # Reject weak chop (< +3.0%)
+MAX_M5_PRICE_CHANGE_PCT = 5.8      # Reject blown-off pump exhaustion (> +5.8%)
 MIN_M5_BUY_SELL_RATIO = 1.25       # Buyers must dominate sellers by 25% in last 5m
 MAX_H1_DROP_PCT = -12.0            # Allows normal pullbacks, rejects waterfall collapses (> -12% in 1 hour)
 
@@ -313,7 +314,7 @@ def evaluate_pair(p: dict) -> dict:
 
     # Base Quality Gates
     base_ok = (
-        liq >= MIN_LIQUIDITY_USD and 
+        MIN_LIQUIDITY_USD <= liq <= MAX_LIQUIDITY_USD and 
         vol_24h >= MIN_24H_VOLUME_USD and 
         mc >= MIN_MARKET_CAP_USD and
         vol_mc >= MIN_VOL_TO_MC_RATIO and 
@@ -408,9 +409,10 @@ def run_single_cycle(state: dict) -> bool:
             if is_stagnant:
                 exit_price = curr_price * (1.0 - SIMULATED_SLIPPAGE_PCT)
             else:
-                normal_trigger_fill = entry_price * locked_sl * (1.0 - SIMULATED_SLIPPAGE_PCT)
+                # Simulated on-chain stop execution floor: protects capital at max(locked_sl * 0.985, 0.88)
+                effective_floor = max(locked_sl * (1.0 - SIMULATED_SLIPPAGE_PCT), 0.88)
                 gap_fill = curr_price * (1.0 - SIMULATED_SLIPPAGE_PCT)
-                exit_price = gap_fill if mult < 0.50 else normal_trigger_fill
+                exit_price = max(gap_fill, entry_price * effective_floor) if locked_sl >= 0.90 else gap_fill
 
             gross = pos["size_inr"] * (exit_price / entry_price)
             net_payout = max(0.0, gross - ESTIMATED_GAS_INR)
