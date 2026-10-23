@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SNK TRADING | Solana Quant Fleet Dashboard</title>
+
+  <!-- Google Fonts: Geist Sans + Geist Mono (Tabular Financial Numerals) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ========================================================================= */
+    /* SNK TRADING / ECHOFI EXACT DESIGN SYSTEM & COLOR CALIBRATION             */
+    /* ========================================================================= */
+    :root {
+      --bg-page: #0D0E12;
+      --bg-card: #15171E;
+      --bg-card-hover: #191B24;
+      --bg-inset: #1C1F28;
+      --bg-pill: #222530;
+      
+      --border: #232632;
+      --border-light: #2D3140;
+      --border-focus: #52D1DC;
+
+      --text-white: #FFFFFF;
+      --text-gray: #8B909D;
+      --text-muted: #535866;
+
+      --cyan: #52D1DC;
+      --cyan-glow: rgba(82, 209, 220, 0.28);
+      --green: #2ED573;
+      --green-glow: rgba(46, 213, 115, 0.25);
+      --red: #FF4757;
+      --purple: #A855F7;
+      --pink: #EC4899;
+      --button-white: #FFFFFF;
+      --button-white-text: #000000;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    html, body {
+      background-color: var(--bg-page);
+      color: var(--text-white);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .tab-num {
+      font-family: 'Geist Mono', monospace;
+      font-feature-settings: "tnum" 1, "zero" 1;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+
+    /* Container Card */
+    .echo-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      transition: border-color 0.15s ease;
+    }
+    .echo-panel:hover {
+      border-color: var(--border-light);
+    }
+
+    /* Stark Pure White Pill Button */
+    .echo-btn-white {
+      background: var(--button-white);
+      color: var(--button-white-text);
+      font-weight: 700;
+      border-radius: 9999px;
+      padding: 9px 20px;
+      font-size: 13px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      transition: opacity 0.15s ease, transform 0.1s ease;
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.12);
+    }
+    .echo-btn-white:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+    .echo-btn-white:active {
+      transform: scale(0.98);
+    }
+
+    /* Secondary Action Pill */
+    .echo-btn-secondary {
+      background: var(--bg-inset);
+      color: var(--text-white);
+      font-weight: 600;
+      border-radius: 9999px;
+      padding: 9px 18px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .echo-btn-secondary:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-light);
+    }
+
+    /* Navigation Pills */
+    .nav-tab {
+      color: var(--text-gray);
+      cursor: pointer;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-tab:hover {
+      color: var(--text-white);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .nav-tab.active {
+      color: var(--text-white);
+      background: var(--bg-pill);
+      border-color: var(--border-light);
+      font-weight: 700;
+    }
+
+    /* Small filter pills (1D, 7D, 1M, etc) */
+    .echo-pill {
+      background: transparent;
+      color: var(--text-gray);
+      border: 1px solid transparent;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .echo-pill.active {
+      background: var(--bg-pill);
+      color: var(--text-white);
+      border-color: var(--border-light);
+    }
+    .echo-pill:hover:not(.active) {
+      color: var(--text-white);
+    }
+
+    /* Custom range slider */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 4px;
+      background: #232632;
+      border-radius: 2px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: #52D1DC;
+      cursor: pointer;
+      margin-top: -6px;
+      box-shadow: 0 0 8px rgba(82, 209, 220, 0.6);
+      border: 2px solid #0D0E12;
+    }
+
+    /* Subtle pulse animations */
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+    .glow-cyan {
+      box-shadow: 0 0 10px rgba(82, 209, 220, 0.6);
+      animation: pulseGlow 2.5s infinite ease-in-out;
+    }
+    .glow-green {
+      box-shadow: 0 0 10px rgba(46, 213, 115, 0.6);
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #0D0E12; }
+    ::-webkit-scrollbar-thumb { background: #232632; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #52D1DC; }
+
+    /* Modal Backdrop */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(8, 9, 12, 0.82);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body style="padding: 16px 24px; max-width: 1600px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;">
+
+  <!-- ========================================================================= -->
+  <!-- 1. TOP BRAND HEADER                                                       -->
+  <!-- ========================================================================= -->
+  <header style="display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 4px 0;">
+    
+    <!-- Left: Brand + Nav Tabs -->
+    <div style="display: flex; align-items: center; gap: 28px;">
+      
+      <!-- Brand Logo (SNK Trading) -->
+      <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="switchTab('overview')">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L14.6 9.4L22 12L14.6 14.6L12 22L9.4 14.6L2 12L9.4 9.4L12 2Z" fill="#52D1DC" />
+        </svg>
+        <div style="display: flex; flex-direction: column; line-height: 1.1;">
+          <span style="font-weight: 800; font-size: 17px; letter-spacing: -0.02em; color: #FFFFFF;">SNK TRADING</span>
+          <span style="font-size: 9px; color: var(--cyan); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">Solana Quant Fleet</span>
+        </div>
+      </div>
+
+      <!-- Functional Fleet Navigation Tabs -->
+      <nav id="fleetNav" style="display: flex; align-items: center; gap: 6px;">
+        <div id="tab-overview" class="nav-tab active" onclick="switchTab('overview')">
+          <span>Overview</span>
+        </div>
+        <div id="tab-sniper" class="nav-tab" onclick="switchTab('sniper')">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--green);"></span>
+          <span>V9 Runner</span>
+        </div>
+        <div id="tab-gravitas" class="nav-tab" onclick="switchTab('gravitas')">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--cyan);"></span>
+          <span>V7 Gravitas</span>
+        </div>
+        <div id="tab-polymarket" class="nav-tab" onclick="switchTab('polymarket')">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--purple);"></span>
+          <span>Polymarket</span>
+        </div>
+        <div id="tab-blotter" class="nav-tab" onclick="openBlottersModal()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Trade History</span>
+        </div>
+      </nav>
+    </div>
+
+    <!-- Right: Currency, Status Beacon & Fleet Action Button -->
+    <div style="display: flex; align-items: center; gap: 14px;">
+      
+      <!-- Currency Switcher -->
+      <div style="display: flex; background: var(--bg-inset); border: 1px solid var(--border); border-radius: 9999px; padding: 3px; font-size: 11px; font-family: 'Geist Mono', monospace;">
+        <button id="btnINR" onclick="setCurrency('INR')" style="background: var(--cyan); color: #000; border: none; padding: 4px 11px; border-radius: 9999px; font-weight: 700; cursor: pointer;">₹ INR</button>
+        <button id="btnUSD" onclick="setCurrency('USD')" style="background: transparent; color: var(--text-gray); border: none; padding: 4px 11px; border-radius: 9999px; font-weight: 500; cursor: pointer;">$ USD</button>
+      </div>
+
+      <!-- Live Sync Beacon -->
+      <div style="display: flex; align-items: center; gap: 7px; font-size: 11px; font-family: 'Geist Mono', monospace; color: var(--text-gray); background: var(--bg-inset); padding: 5px 12px; border-radius: 9999px; border: 1px solid var(--border);">
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--green);" class="glow-green"></span>
+        <span id="liveStatusText" style="color: #FFFFFF; font-weight: 600;">VPS FLEET LIVE (3/3)</span>
+      </div>
+
+      <!-- Action Button: Sync Fleet (Replaces useless Connect Wallet) -->
+      <button class="echo-btn-white" onclick="manualSyncFleet()">
+        <svg id="syncIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        <span id="syncBtnText">Sync Telemetry</span>
+      </button>
+
+      <!-- Ledger Bell Notification -->
+      <div style="cursor: pointer; padding: 7px; color: var(--text-gray); background: var(--bg-card); border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center;" onclick="openBlottersModal()" title="View Closed Trades">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </div>
+    </div>
+
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 2. HORIZONTAL METRICS STRIP (EchoFi Exact Single-Row Ticker)              -->
+  <!-- ========================================================================= -->
+  <div class="echo-panel" style="padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; overflow-x: auto; font-size: 12px;">
+    
+    <!-- Active Engine Badge -->
+    <div style="display: flex; align-items: center; gap: 10px; min-width: 170px;">
+      <div id="badgeIconBox" style="width: 30px; height: 30px; border-radius: 50%; background: #20232D; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-light); font-size: 13px;">
+        ⚡
+      </div>
+      <div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <span id="tickerEngineTitle" style="font-weight: 700; font-size: 13px; color: #FFFFFF;">COMBINED FLEET</span>
+        </div>
+        <div id="tickerEngineSubtitle" style="color: var(--text-gray); font-size: 11px;">Overview (3 Engines)</div>
+      </div>
+    </div>
+
+    <!-- Metric 1: Capital / Cash -->
+    <div>
+      <div style="color: var(--text-gray); font-size: 11px; margin-bottom: 2px;">Total Capital</div>
+      <div id="tickerCapital" class="tab-num" style="font-weight: 700; font-size: 14px; color: #FFFFFF;">₹2,24,000</div>
+    </div>
+
+    <!-- Metric 2: Live Cash Available -->
+    <div>
+      <div style="color: var(--text-gray); font-size: 11px; margin-bottom: 2px;">Cash Balance</div>
+      <div id="tickerCash" class="tab-num" style="font-weight: 700; font-size: 14px; color: var(--cyan);">₹2,12,716.55</div>
+    </div>
+
+    <!-- Metric 3: Net Realized PnL -->
+    <div>
+      <div style="color: var(--text-gray); font-size: 11px; margin-bottom: 2px;">Net Realized PnL</div>
+      <div id="tickerPnL" class="tab-num" style="font-weight: 700; font-size: 14px; color: var(--red);">-₹11,283.45</div>
+    </div>
+
+    <!-- Metric 4: Total Trades -->
+    <div>
+      <div style="color: var(--text-gray); font-size: 11px; margin-bottom: 2px;">Closed Trades</div>
+      <div id="tickerTrades" class="tab-num" style="font-weight: 700; font-size: 14px; color: #FFFFFF;">301 Trades</div>
+    </div>
+
+    <!-- Metric 5: Win/Loss Ratio Split Bar (EchoFi Signature Dual-Color Bar) -->
+    <div style="min-width: 200px;">
+      <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+        <span id="winPctLabel" style="color: var(--green); font-weight: 600;" class="tab-num">33.9% Win</span>
+        <span style="color: var(--text-muted); font-size: 10px;">Fleet Win / Loss</span>
+        <span id="lossPctLabel" style="color: var(--red); font-weight: 600;" class="tab-num">66.1% Loss</span>
+      </div>
+      <div style="height: 5px; background: var(--bg-inset); border-radius: 9999px; overflow: hidden; display: flex;">
+        <div id="winBarFill" style="width: 33.9%; background: var(--green); transition: width 0.3s ease;"></div>
+        <div id="lossBarFill" style="width: 66.1%; background: var(--red); transition: width 0.3s ease;"></div>
+      </div>
+    </div>
+
+    <!-- Metric 6: Active Open Positions -->
+    <div style="text-align: right; min-width: 130px;">
+      <div style="color: var(--text-gray); font-size: 11px; margin-bottom: 2px;">Active Position</div>
+      <div id="tickerActivePos" class="tab-num" style="font-weight: 700; font-size: 14px; color: var(--green);">1 Runner (Onion)</div>
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 3. MIDDLE SECTION: MAIN CHART (LEFT 70%) & ENGINE CONTROL DECK (RIGHT 30%)-->
+  <!-- ========================================================================= -->
+  <div style="display: grid; grid-template-columns: 1fr 390px; gap: 16px;">
+    
+    <!-- LEFT PANEL: ECHOFI SIGNATURE SPLINE + VOLUME HISTOGRAM -->
+    <div class="echo-panel" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; position: relative;">
+      
+      <!-- Chart Controls Header -->
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        
+        <!-- View Filters -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button id="chartModePnL" class="echo-pill active" onclick="setChartMode('pnl')">Cumulative PnL</button>
+          <button id="chartModeEquity" class="echo-pill" onclick="setChartMode('equity')">Fleet Equity</button>
+          <button id="chartModeTrades" class="echo-pill" onclick="setChartMode('trades')">Trade Multiples</button>
+        </div>
+
+        <!-- Metric Indicator Pills (EchoFi Exact layout) -->
+        <div style="display: flex; align-items: center; gap: 14px; font-size: 11px; color: var(--text-gray);">
+          <div style="display: flex; align-items: center; gap: 5px;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--cyan);"></span>
+            <span>Realized Growth</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 5px;">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: #2A2E3D;"></span>
+            <span>Trade Volume</span>
+          </div>
+        </div>
+
+        <!-- Timeframe Selector -->
+        <div style="display: flex; align-items: center; gap: 4px; background: var(--bg-inset); padding: 2px 4px; border-radius: 9999px; border: 1px solid var(--border);">
+          <button class="echo-pill" onclick="setTimeframe('1D')">1D</button>
+          <button class="echo-pill" onclick="setTimeframe('7D')">7D</button>
+          <button class="echo-pill active" onclick="setTimeframe('1M')">1M</button>
+          <button class="echo-pill" onclick="setTimeframe('1Y')">1Y</button>
+          <button class="echo-pill" onclick="setTimeframe('ALL')">All</button>
+        </div>
+      </div>
+
+      <!-- Live Value Callout in Chart Header -->
+      <div style="display: flex; align-items: baseline; gap: 12px; margin-top: -6px;">
+        <span id="chartPrimaryVal" class="tab-num" style="font-size: 26px; font-weight: 800; color: #FFFFFF;">-₹11,283.45</span>
+        <span id="chartSecondaryVal" class="tab-num" style="font-size: 13px; font-weight: 600; color: var(--red);">-5.03% Net Fleet Drawdown</span>
+      </div>
+
+      <!-- Pure Native Canvas Chart Container -->
+      <div style="position: relative; width: 100%; height: 350px;">
+        <canvas id="mainChartCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL: ENGINE STATUS & RISK CONTROLS DECK -->
+    <div class="echo-panel" style="padding: 20px 22px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px;">
+      
+      <!-- Deck Header -->
+      <div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span id="deckEngineHeader" style="font-weight: 700; font-size: 16px; color: #FFFFFF;">ENGINE CONTROLS</span>
+          </div>
+          <span id="deckStatusBadge" style="background: rgba(46, 213, 115, 0.15); color: var(--green); border: 1px solid rgba(46, 213, 115, 0.3); padding: 3px 10px; border-radius: 9999px; font-size: 10px; font-weight: 700; font-family: 'Geist Mono', monospace;">ACTIVE ●</span>
+        </div>
+
+        <!-- Strategy Profile Selection Tabs -->
+        <div style="display: flex; background: var(--bg-inset); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 3px; margin-bottom: 16px;">
+          <button id="modeAggressive" class="echo-pill active" style="flex: 1; text-align: center;" onclick="setExecutionMode('sniper')">V9 Runner</button>
+          <button id="modeConservative" class="echo-pill" style="flex: 1; text-align: center;" onclick="setExecutionMode('gravitas')">V7 Momentum</button>
+          <button id="modeArbitrage" class="echo-pill" style="flex: 1; text-align: center;" onclick="setExecutionMode('poly')">Polymarket</button>
+        </div>
+
+        <!-- Bot Capital Allocation Box -->
+        <div style="background: var(--bg-inset); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-gray); margin-bottom: 6px;">
+            <span>Current Available Cash</span>
+            <span id="deckEngineName" style="color: var(--cyan); font-weight: 600;">V9 Runner Sniper</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span id="deckCashVal" class="tab-num" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">₹21,192.50</span>
+            <span id="deckCapBadge" style="background: var(--bg-pill); border: 1px solid var(--border-light); padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; color: var(--text-white);" class="tab-num">₹1,000 / trade</span>
+          </div>
+        </div>
+
+        <!-- Risk & Strategy Parameter Matrix -->
+        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 12px; background: rgba(0,0,0,0.15); padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);">
+          
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-gray);">Take Profit Trailing</span>
+            <span id="paramTP" style="font-weight: 600; color: var(--green);" class="tab-num">Free Ride Lock @ 1.70x</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-gray);">Stop Loss Hard Floor</span>
+            <span id="paramSL" style="font-weight: 600; color: var(--red);" class="tab-num">-12.0% (Tight Guard)</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-gray);">Stagnation Timeout</span>
+            <span id="paramStag" style="font-weight: 600; color: #FFFFFF;" class="tab-num">300s (Zero Velocity Cut)</span>
+          </div>
+
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-gray);">Max Slippage Guard</span>
+            <span style="font-weight: 600; color: var(--cyan);" class="tab-num">15.0% Anti-MEV</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Buttons Area (Replacing Connect Wallet) -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        
+        <!-- Primary Action: Trigger Immediate Telemetry Sync / Scan -->
+        <button class="echo-btn-white" style="width: 100%; padding: 13px 0; font-size: 14px;" onclick="manualSyncFleet()">
+          <span id="primaryActionBtnText">🔄 Sync Fleet Telemetry</span>
+        </button>
+
+        <!-- Secondary Action: Open Full Closed Trade Blotter -->
+        <button class="echo-btn-secondary" style="width: 100%; padding: 11px 0;" onclick="openBlottersModal()">
+          <span>📜 View Complete Trade Blotter (300+ Trades)</span>
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 4. BOTTOM 3 METRIC CARDS (ECHOFI EXACT 3-COLUMN GRID)                     -->
+  <!-- ========================================================================= -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+    
+    <!-- CARD 1: ENGINE ACTIVITY & HOURLY TRADING VOLUME -->
+    <div class="echo-panel" style="padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; min-height: 220px;">
+      <div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-weight: 700; font-size: 14px; color: #FFFFFF;">Fleet Trade Distribution</span>
+          <span style="color: var(--text-muted); font-size: 11px; font-family: 'Geist Mono', monospace;">Closed Trades</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 8px;">
+          <span id="card1TradesVal" class="tab-num" style="font-weight: 800; font-size: 18px; color: #FFFFFF;">306 Executed</span>
+          <span id="card1SubVal" style="color: var(--cyan); font-size: 12px; font-weight: 600;" class="tab-num">V9: 221 • V7: 85</span>
+        </div>
+      </div>
+
+      <!-- Monthly/Distribution Bar Chart (Jun Highlighted) -->
+      <div style="position: relative; width: 100%; height: 130px; margin-top: 10px;">
+        <canvas id="dexVolumeCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+      </div>
+    </div>
+
+    <!-- CARD 2: FLEET WIN RATE & EFFICIENCY GAUGE -->
+    <div class="echo-panel" style="padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; min-height: 220px;">
+      <div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-weight: 700; font-size: 14px; color: #FFFFFF;">Win Rate & Health Ratio</span>
+          <span style="color: var(--cyan); font-size: 11px; cursor: pointer; font-weight: 500;" onclick="openBlottersModal()">View Log ↗</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px; margin-top: 4px;">
+          <div>
+            <div id="card2Wins" class="tab-num" style="font-weight: 800; font-size: 16px; color: var(--green);">102 Wins</div>
+            <div style="color: var(--text-gray); font-size: 10px;">Profitable Exits</div>
+          </div>
+          <div style="width: 1px; height: 24px; background: var(--border);"></div>
+          <div>
+            <div id="card2Losses" class="tab-num" style="font-weight: 800; font-size: 16px; color: var(--red);">199 Losses</div>
+            <div style="color: var(--text-gray); font-size: 10px;">Tight Stop Cuts</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Semicircle Radial Gradient Gauge -->
+      <div style="position: relative; width: 100%; height: 115px; display: flex; align-items: center; justify-content: center; margin-top: 5px;">
+        <canvas id="gaugeCanvas" width="180" height="95" style="display: block;"></canvas>
+        <div style="position: absolute; bottom: 8px; text-align: center;">
+          <div id="gaugeCenterNum" class="tab-num" style="font-size: 22px; font-weight: 800; color: #FFFFFF;">33.9%</div>
+          <div style="font-size: 9px; color: var(--text-gray); letter-spacing: 0.05em; text-transform: uppercase;">WIN PROBABILITY</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 3: LIVE ACTIVE RUNNER RADAR (Glowing Neon Green Wave) -->
+    <div class="echo-panel" style="padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; min-height: 220px;">
+      <div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-weight: 700; font-size: 14px; color: #FFFFFF;">Live Position Radar</span>
+          <span id="runnerPulse" style="background: rgba(46, 213, 115, 0.15); color: var(--green); border: 1px solid rgba(46, 213, 115, 0.3); padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700;" class="tab-num">1 HOLDING</span>
+        </div>
+        <div style="display: flex; align-items: baseline; justify-content: space-between;">
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <span id="runnerTokenSymbol" class="tab-num" style="font-weight: 800; font-size: 18px; color: #FFFFFF;">Onion</span>
+            <span id="runnerMultiple" class="tab-num" style="font-weight: 700; font-size: 14px; color: var(--green);">2.06x (+105.6%)</span>
+          </div>
+          <span id="runnerPnlInr" class="tab-num" style="font-weight: 700; font-size: 14px; color: var(--green);">+₹528.00</span>
+        </div>
+        <div id="runnerSubtext" style="color: var(--text-gray); font-size: 11px; margin-top: 2px;">
+          Trailing Stop Floor locked at 1.70x (Free-Ride Active)
+        </div>
+      </div>
+
+      <!-- Glowing Neon Green Wave Sparkline -->
+      <div style="position: relative; width: 100%; height: 100px; margin-top: 10px;">
+        <canvas id="greenWaveCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 5. TRADE HISTORY BLOTTER MODAL (Full Ledger)                               -->
+  <!-- ========================================================================= -->
+  <div id="blotterModal" class="modal-overlay">
+    <div class="echo-panel" style="width: 95%; max-width: 1100px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.8);">
+      
+      <!-- Modal Header -->
+      <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 16px; font-weight: 700; color: #FFFFFF;">SNK TRADING | Realized Trade Ledger</span>
+          <span id="modalTradeCount" style="background: var(--bg-inset); padding: 3px 9px; border-radius: 9999px; font-size: 11px; font-family: 'Geist Mono', monospace; color: var(--cyan);">301 Total Trades</span>
+        </div>
+        <button onclick="closeBlottersModal()" style="background: transparent; border: none; color: var(--text-gray); font-size: 18px; cursor: pointer; padding: 4px 8px;">✕</button>
+      </div>
+
+      <!-- Table Scroll Body -->
+      <div style="overflow-y: auto; padding: 12px 20px; font-size: 12px; font-family: 'Geist Mono', monospace;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead>
+            <tr style="color: var(--text-muted); border-bottom: 1px solid var(--border); font-size: 11px;">
+              <th style="padding: 8px 4px;">#</th>
+              <th style="padding: 8px 4px;">Engine</th>
+              <th style="padding: 8px 4px;">Exit Time</th>
+              <th style="padding: 8px 4px;">Token</th>
+              <th style="padding: 8px 4px;">Size (INR)</th>
+              <th style="padding: 8px 4px;">Exit Mult</th>
+              <th style="padding: 8px 4px;">Net PnL</th>
+              <th style="padding: 8px 4px;">Exit Reason</th>
+              <th style="padding: 8px 4px; text-align: right;">Chart</th>
+            </tr>
+          </thead>
+          <tbody id="blotterModalRows">
+            <!-- Populated dynamically via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal Footer -->
+      <div style="padding: 12px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-gray);">
+        <span>Auto-synced with VPS systemd services (`quantum-sniper` & `quantum-gravitas`).</span>
+        <button class="echo-btn-white" style="padding: 6px 16px; font-size: 12px;" onclick="closeBlottersModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 6. HIGH-PERFORMANCE DASHBOARD LOGIC (Zero External CDN Dependency)        -->
+  <!-- ========================================================================= -->
+  <script>
+    // State Store
+    let currency = 'INR';
+    let currentTab = 'overview'; // 'overview' | 'sniper' | 'gravitas' | 'polymarket'
+    let currentChartMode = 'pnl'; // 'pnl' | 'equity' | 'trades'
+    let currentTimeframe = '1M';
+    
+    // Cached Engine Telemetry
+    let v7Data = null;
+    let sniperData = null;
+    let polyData = null;
+
+    // Currency Formatter
+    const fmtINR = (n) => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    const fmtUSD = (n) => '$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
+
+    function setCurrency(c) {
+      currency = c;
+      document.getElementById('btnINR').style.background = c === 'INR' ? 'var(--cyan)' : 'transparent';
+      document.getElementById('btnINR').style.color = c === 'INR' ? '#000' : 'var(--text-gray)';
+      document.getElementById('btnUSD').style.background = c === 'USD' ? 'var(--cyan)' : 'transparent';
+      document.getElementById('btnUSD').style.color = c === 'USD' ? '#000' : 'var(--text-gray)';
+      renderActiveTab();
+    }
+
+    // =========================================================================
+    // TAB SWITCHER LOGIC (Overview / V8 Sniper / V7 Gravitas / Polymarket)
+    // =========================================================================
+    function switchTab(tab) {
+      currentTab = tab;
+      
+      // Update Tab Visual Styling
+      document.querySelectorAll('#fleetNav .nav-tab').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById(`tab-${tab}`);
+      if (activeEl) activeEl.classList.add('active');
+
+      renderActiveTab();
+    }
+
+    function renderActiveTab() {
+      if (!v7Data && !sniperData) return;
+
+      const v7Cash = Number(v7Data?.cash_balance || 91524);
+      const v8Cash = Number(sniperData?.cash_balance || 21192);
+      const polyCash = Number(polyData?.cash_balance_inr || 100000);
+
+      const v7Trades = v7Data?.closed_trades || [];
+      const v8Trades = sniperData?.closed_trades || [];
+      const allTrades = [...v7Trades, ...v8Trades];
+
+      if (currentTab === 'sniper') {
+        // --- V9 RUNNER ACTIVE ---
+        document.getElementById('tickerEngineTitle').innerText = 'V9 RUNNER SNIPER';
+        document.getElementById('tickerEngineSubtitle').innerText = 'Solana Memecoin Breakout (3-Stage Moonbag)';
+        document.getElementById('badgeIconBox').innerText = '🎯';
+        
+        const cap = 25000;
+        const pnl = v8Cash - cap;
+        document.getElementById('tickerCapital').innerText = currency === 'INR' ? fmtINR(cap) : fmtUSD(cap / 84);
+        document.getElementById('tickerCash').innerText = currency === 'INR' ? fmtINR(v8Cash) : fmtUSD(v8Cash / 84);
+        document.getElementById('tickerPnL').innerText = (pnl >= 0 ? '+' : '') + (currency === 'INR' ? fmtINR(pnl) : fmtUSD(pnl / 84));
+        document.getElementById('tickerPnL').style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+        document.getElementById('tickerTrades').innerText = `${v8Trades.length} Trades`;
+
+        const wins = v8Trades.filter(t => (t.net_pnl_inr || 0) > 0).length;
+        const losses = v8Trades.length - wins;
+        const winRate = v8Trades.length > 0 ? (wins / v8Trades.length) * 100 : 0;
+        updateWinRateBar(winRate, wins, losses);
+
+        const openPositions = sniperData?.open_positions || [];
+        if (openPositions.length > 0) {
+          const first = openPositions[0];
+          document.getElementById('tickerActivePos').innerText = `${openPositions.length} Holding (${first.symbol})`;
+          document.getElementById('runnerTokenSymbol').innerText = first.symbol;
+          document.getElementById('runnerMultiple').innerText = `${(first.current_multiple || 1).toFixed(2)}x (+${(first.current_pnl_pct || 0).toFixed(1)}%)`;
+          document.getElementById('runnerPnlInr').innerText = `+₹${(first.current_pnl_inr || 0).toFixed(2)}`;
+          document.getElementById('runnerSubtext').innerText = first.current_sl_label || 'V9 Wide Trailing Active';
+          document.getElementById('runnerPulse').innerText = `${openPositions.length} ACTIVE RUNNER`;
+        } else {
+          document.getElementById('tickerActivePos').innerText = '0 Active (Scanning)';
+          document.getElementById('runnerTokenSymbol').innerText = 'No Open Position';
+          document.getElementById('runnerMultiple').innerText = '--';
+          document.getElementById('runnerPnlInr').innerText = '₹0.00';
+          document.getElementById('runnerSubtext').innerText = 'V9 Engine scanning PumpPortal, Jupiter & Raydium...';
+          document.getElementById('runnerPulse').innerText = 'IDLE SCAN';
+        }
+
+        // Deck Updates
+        document.getElementById('deckEngineHeader').innerText = 'V9 RUNNER ENGINE';
+        document.getElementById('deckEngineName').innerText = 'V9 Runner-Capture (3-Stage Moonbag)';
+        document.getElementById('deckCashVal').innerText = currency === 'INR' ? fmtINR(v8Cash) : fmtUSD(v8Cash / 84);
+        document.getElementById('deckCapBadge').innerText = '₹1,000 / trade';
+        document.getElementById('paramTP').innerText = 'Stage 1: 1.5x (50%) • Stage 2: 2.5x';
+        document.getElementById('paramSL').innerText = '-12.0% (Tight Guard & Breakeven Lock)';
+        document.getElementById('paramStag').innerText = '900s (15m Consolidation Runway)';
+
+        // Chart values
+        document.getElementById('chartPrimaryVal').innerText = (pnl >= 0 ? '+' : '') + (currency === 'INR' ? fmtINR(pnl) : fmtUSD(pnl / 84));
+        document.getElementById('chartSecondaryVal').innerText = `${((pnl / cap) * 100).toFixed(2)}% Realized Return`;
+        document.getElementById('chartSecondaryVal').style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+        drawMainChartForTrades(v8Trades);
+
+      } else if (currentTab === 'gravitas') {
+        // --- V7 GRAVITAS ACTIVE ---
+        document.getElementById('tickerEngineTitle').innerText = 'QUANTUM GRAVITAS';
+        document.getElementById('tickerEngineSubtitle').innerText = 'V7 High-Liquidity Momentum';
+        document.getElementById('badgeIconBox').innerText = '💎';
+
+        const cap = 100000;
+        const pnl = v7Cash - cap;
+        document.getElementById('tickerCapital').innerText = currency === 'INR' ? fmtINR(cap) : fmtUSD(cap / 84);
+        document.getElementById('tickerCash').innerText = currency === 'INR' ? fmtINR(v7Cash) : fmtUSD(v7Cash / 84);
+        document.getElementById('tickerPnL').innerText = (pnl >= 0 ? '+' : '') + (currency === 'INR' ? fmtINR(pnl) : fmtUSD(pnl / 84));
+        document.getElementById('tickerPnL').style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+        document.getElementById('tickerTrades').innerText = `${v7Trades.length} Trades`;
+
+        const wins = v7Trades.filter(t => (t.net_pnl_inr || 0) > 0).length;
+        const losses = v7Trades.length - wins;
+        const winRate = v7Trades.length > 0 ? (wins / v7Trades.length) * 100 : 0;
+        updateWinRateBar(winRate, wins, losses);
+
+        const openPositions = v7Data?.open_positions || [];
+        document.getElementById('tickerActivePos').innerText = `${openPositions.length} Active`;
+        document.getElementById('runnerTokenSymbol').innerText = openPositions.length > 0 ? openPositions[0].symbol : 'Scanning DEXs';
+        document.getElementById('runnerMultiple').innerText = openPositions.length > 0 ? `${openPositions[0].current_multiple}x` : '0 Active';
+        document.getElementById('runnerPnlInr').innerText = '₹0.00';
+        document.getElementById('runnerSubtext').innerText = 'V7 Engine monitoring high-volume runners >$100k volume.';
+        document.getElementById('runnerPulse').innerText = 'SCANNING';
+
+        // Deck Updates
+        document.getElementById('deckEngineHeader').innerText = 'V7 GRAVITAS ENGINE';
+        document.getElementById('deckEngineName').innerText = 'High-Liquidity Momentum';
+        document.getElementById('deckCashVal').innerText = currency === 'INR' ? fmtINR(v7Cash) : fmtUSD(v7Cash / 84);
+        document.getElementById('deckCapBadge').innerText = '₹10,000 / trade';
+        document.getElementById('paramTP').innerText = 'Breakeven Guard @ 1.015x';
+        document.getElementById('paramSL').innerText = 'Dynamic Liquidity Floor';
+        document.getElementById('paramStag').innerText = 'Volume Momentum Decay Cut';
+
+        // Chart values
+        document.getElementById('chartPrimaryVal').innerText = (pnl >= 0 ? '+' : '') + (currency === 'INR' ? fmtINR(pnl) : fmtUSD(pnl / 84));
+        document.getElementById('chartSecondaryVal').innerText = `${((pnl / cap) * 100).toFixed(2)}% Realized Return`;
+        document.getElementById('chartSecondaryVal').style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+        drawMainChartForTrades(v7Trades);
+
+      } else if (currentTab === 'polymarket') {
+        // --- POLYMARKET ACTIVE ---
+        document.getElementById('tickerEngineTitle').innerText = 'POLYMARKET ARBITRAGE';
+        document.getElementById('tickerEngineSubtitle').innerText = 'Zero-Risk Binary Complete-Set';
+        document.getElementById('badgeIconBox').innerText = '⚖️';
+
+        const cap = 100000;
+        const pnl = Number(polyData?.total_profit_inr || 0);
+        document.getElementById('tickerCapital').innerText = currency === 'INR' ? fmtINR(cap) : fmtUSD(cap / 84);
+        document.getElementById('tickerCash').innerText = currency === 'INR' ? fmtINR(polyCash) : fmtUSD(polyCash / 84);
+        document.getElementById('tickerPnL').innerText = (currency === 'INR' ? fmtINR(pnl) : fmtUSD(pnl / 84));
+        document.getElementById('tickerPnL').style.color = 'var(--green)';
+        document.getElementById('tickerTrades').innerText = '0 Arbitrages';
+
+        updateWinRateBar(100, 0, 0);
+
+        document.getElementById('tickerActivePos').innerText = 'Scanning Spreads';
+        document.getElementById('runnerTokenSymbol').innerText = 'Strict Complete-Set';
+        document.getElementById('runnerMultiple').innerText = '1.02x Guaranteed';
+        document.getElementById('runnerPnlInr').innerText = '₹0.00';
+        document.getElementById('runnerSubtext').innerText = 'Looking for Yes+No pricing < $0.985 for mathematically guaranteed profit.';
+        document.getElementById('runnerPulse').innerText = 'MONITORING';
+
+        // Deck Updates
+        document.getElementById('deckEngineHeader').innerText = 'POLYMARKET ENGINE';
+        document.getElementById('deckEngineName').innerText = 'Binary Event Arbitrage';
+        document.getElementById('deckCashVal').innerText = currency === 'INR' ? fmtINR(polyCash) : fmtUSD(polyCash / 84);
+        document.getElementById('deckCapBadge').innerText = '$1,200 Capital';
+        document.getElementById('paramTP').innerText = 'Auto-Redeem on Resolution';
+        document.getElementById('paramSL').innerText = '0.00% (No Negative Risk)';
+        document.getElementById('paramStag').innerText = 'Spread Gap Execution';
+
+        document.getElementById('chartPrimaryVal').innerText = currency === 'INR' ? '₹0.00' : '$0.00';
+        document.getElementById('chartSecondaryVal').innerText = '0.00% (Awaiting Pricing Gap)';
+        document.getElementById('chartSecondaryVal').style.color = 'var(--cyan)';
+
+        drawMainChartForTrades([]);
+
+      } else {
+        // --- OVERVIEW (COMBINED FLEET) ---
+        document.getElementById('tickerEngineTitle').innerText = 'COMBINED FLEET';
+        document.getElementById('tickerEngineSubtitle').innerText = 'Overview (3 Engines)';
+        document.getElementById('badgeIconBox').innerText = '⚡';
+
+        const totalCap = 25000 + 100000 + 100000;
+        const totalCash = v8Cash + v7Cash + polyCash;
+        const totalPnL = totalCash - totalCap;
+
+        document.getElementById('tickerCapital').innerText = currency === 'INR' ? fmtINR(totalCap) : fmtUSD(totalCap / 84);
+        document.getElementById('tickerCash').innerText = currency === 'INR' ? fmtINR(totalCash) : fmtUSD(totalCash / 84);
+        document.getElementById('tickerPnL').innerText = (totalPnL >= 0 ? '+' : '') + (currency === 'INR' ? fmtINR(totalPnL) : fmtUSD(totalPnL / 84));
+        document.getElementById('tickerPnL').style.color = totalPnL >= 0 ? 'var(--green)' : 'var(--red)';
+        document.getElementById('tickerTrades').innerText = `${allTrades.length} Trades`;
+
+        document.getElementById('card1TradesVal').innerText = `${allTrades.length} Executed`;
+        const card1Sub = document.getElementById('card1SubVal');
+        if (card1Sub) card1Sub.innerText = `V9: ${v8Trades.length} • V7: ${v7Trades.length}`;
+
+        const wins = allTrades.filter(t => (t.net_pnl_inr || 0) > 0).length;
+        const losses = allTrades.length - wins;
+        const winRate = allTrades.length > 0 ? (wins / allTrades.length) * 100 : 0;
+        updateWinRateBar(winRate, wins, losses);
+
+        const sniperOpen = sniperData?.open_positions || [];
+        if (sniperOpen.length > 0) {
+          const first = sniperOpen[0];
+          document.getElementById('tickerActivePos').innerText = `${sniperOpen.length} Runner (${first.symbol})`;
+          document.getElementById('runnerTokenSymbol').innerText = first.symbol;
+          document.getElementById('runnerMultiple').innerText = `${(first.current_multiple || 1).toFixed(2)}x (+${(first.current_pnl_pct || 0).toFixed(1)}%)`;
+          document.getElementById('runnerPnlInr').innerText = `+₹${(first.current_pnl_inr || 0).toFixed(2)}`;
+          document.getElementById('runnerSubtext').innerText = first.current_sl_label || 'Trailing Stop Active';
+          document.getElementById('runnerPulse').innerText = '1 RUNNER';
+        } else {
+          document.getElementById('tickerActivePos').innerText = '0 Open (Scanning)';
+          document.getElementById('runnerTokenSymbol').innerText = 'Scanning Pools';
+          document.getElementById('runnerMultiple').innerText = '--';
+          document.getElementById('runnerPnlInr').innerText = '₹0.00';
+          document.getElementById('runnerSubtext').innerText = 'All engines active and scanning.';
+          document.getElementById('runnerPulse').innerText = 'IDLE';
+        }
+
+        // Deck Updates
+        document.getElementById('deckEngineHeader').innerText = 'FLEET CONTROLS';
+        document.getElementById('deckEngineName').innerText = 'Multi-Engine Fleet';
+        document.getElementById('deckCashVal').innerText = currency === 'INR' ? fmtINR(totalCash) : fmtUSD(totalCash / 84);
+        document.getElementById('deckCapBadge').innerText = '3 Active Engines';
+        document.getElementById('paramTP').innerText = 'Dynamic Trailing Locks';
+        document.getElementById('paramSL').innerText = 'Multi-Tiered Breakeven Guard';
+        document.getElementById('paramStag').innerText = 'Auto Stagnation Pruning';
+
+        document.getElementById('chartPrimaryVal').innerText = (totalPnL >= 0 ? '+' : '') + (currency === 'INR' ? fmtINR(totalPnL) : fmtUSD(totalPnL / 84));
+        document.getElementById('chartSecondaryVal').innerText = `${((totalPnL / totalCap) * 100).toFixed(2)}% Net Realized Drawdown`;
+        document.getElementById('chartSecondaryVal').style.color = totalPnL >= 0 ? 'var(--green)' : 'var(--red)';
+
+        drawMainChartForTrades(allTrades);
+      }
+
+      // Populate Modal Blotter
+      populateBlotterModal(allTrades);
+    }
+
+    function updateWinRateBar(winRate, wins, losses) {
+      document.getElementById('winPctLabel').innerText = `${winRate.toFixed(1)}% Win`;
+      document.getElementById('lossPctLabel').innerText = `${(100 - winRate).toFixed(1)}% Loss`;
+      document.getElementById('winBarFill').style.width = `${winRate}%`;
+      document.getElementById('lossBarFill').style.width = `${100 - winRate}%`;
+
+      document.getElementById('card2Wins').innerText = `${wins} Wins`;
+      document.getElementById('card2Losses').innerText = `${losses} Losses`;
+      document.getElementById('gaugeCenterNum').innerText = `${winRate.toFixed(1)}%`;
+      drawGauge(winRate / 100);
+    }
+
+    // =========================================================================
+    // CHART 1: CUMULATIVE PNL SPLINE & VOLUME HISTOGRAM
+    // =========================================================================
+    const mainCanvas = document.getElementById('mainChartCanvas');
+    const mainCtx = mainCanvas.getContext('2d');
+
+    function drawMainChartForTrades(trades) {
+      const rect = mainCanvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      mainCanvas.width = rect.width * dpr;
+      mainCanvas.height = rect.height * dpr;
+      mainCtx.scale(dpr, dpr);
+
+      const w = rect.width;
+      const h = rect.height;
+      mainCtx.clearRect(0, 0, w, h);
+
+      if (!trades || trades.length === 0) {
+        // Draw flat baseline
+        mainCtx.strokeStyle = '#232632';
+        mainCtx.lineWidth = 1;
+        mainCtx.beginPath();
+        mainCtx.moveTo(0, h / 2);
+        mainCtx.lineTo(w, h / 2);
+        mainCtx.stroke();
+        mainCtx.fillStyle = 'var(--text-muted)';
+        mainCtx.font = '12px "Geist Mono", monospace';
+        mainCtx.fillText('No closed trades in selected timeframe', w / 2 - 120, h / 2 - 10);
+        return;
+      }
+
+      // Compute cumulative PnL series
+      let runningPnl = 0;
+      const points = trades.map(t => {
+        runningPnl += (t.net_pnl_inr || 0);
+        return {
+          pnl: runningPnl,
+          vol: t.size_inr || 1000
+        };
+      });
+
+      const pnlVals = points.map(p => p.pnl);
+      const minPnl = Math.min(...pnlVals, 0);
+      const maxPnl = Math.max(...pnlVals, 500);
+      const range = (maxPnl - minPnl) || 1;
+
+      // Draw Background Grid Lines
+      mainCtx.strokeStyle = '#181A22';
+      mainCtx.lineWidth = 1;
+      for (let i = 1; i <= 4; i++) {
+        const y = (h / 5) * i;
+        mainCtx.beginPath();
+        mainCtx.moveTo(0, y);
+        mainCtx.lineTo(w, y);
+        mainCtx.stroke();
+      }
+
+      // Draw Bottom Volume Bars
+      const barW = Math.max(2, (w / points.length) * 0.6);
+      mainCtx.fillStyle = 'rgba(42, 46, 61, 0.45)';
+      points.forEach((pt, i) => {
+        const x = (i / (points.length - 1 || 1)) * (w - 20) + 10;
+        const barH = Math.min(80, (pt.vol / 10000) * 60 + 10);
+        mainCtx.fillRect(x - barW / 2, h - barH, barW, barH);
+      });
+
+      // Map Points to Canvas Coordinates
+      const coords = points.map((pt, i) => ({
+        x: (i / (points.length - 1 || 1)) * (w - 30) + 15,
+        y: h - 40 - ((pt.pnl - minPnl) / range) * (h - 90)
+      }));
+
+      // Create Gradient Fill Under Curve
+      const fillGrad = mainCtx.createLinearGradient(0, 0, 0, h);
+      fillGrad.addColorStop(0, 'rgba(82, 209, 220, 0.28)');
+      fillGrad.addColorStop(0.8, 'rgba(82, 209, 220, 0.02)');
+      fillGrad.addColorStop(1, 'rgba(82, 209, 220, 0.00)');
+
+      mainCtx.beginPath();
+      mainCtx.moveTo(coords[0].x, h);
+      mainCtx.lineTo(coords[0].x, coords[0].y);
+      for (let i = 1; i < coords.length; i++) {
+        const xc = (coords[i].x + coords[i - 1].x) / 2;
+        const yc = (coords[i].y + coords[i - 1].y) / 2;
+        mainCtx.quadraticCurveTo(coords[i - 1].x, coords[i - 1].y, xc, yc);
+      }
+      mainCtx.lineTo(coords[coords.length - 1].x, coords[coords.length - 1].y);
+      mainCtx.lineTo(coords[coords.length - 1].x, h);
+      mainCtx.closePath();
+      mainCtx.fillStyle = fillGrad;
+      mainCtx.fill();
+
+      // Draw Glowing Cyan Stroke
+      mainCtx.save();
+      mainCtx.shadowColor = 'rgba(82, 209, 220, 0.75)';
+      mainCtx.shadowBlur = 10;
+      mainCtx.strokeStyle = '#52D1DC';
+      mainCtx.lineWidth = 2.4;
+      mainCtx.beginPath();
+      mainCtx.moveTo(coords[0].x, coords[0].y);
+      for (let i = 1; i < coords.length; i++) {
+        const xc = (coords[i].x + coords[i - 1].x) / 2;
+        const yc = (coords[i].y + coords[i - 1].y) / 2;
+        mainCtx.quadraticCurveTo(coords[i - 1].x, coords[i - 1].y, xc, yc);
+      }
+      mainCtx.lineTo(coords[coords.length - 1].x, coords[coords.length - 1].y);
+      mainCtx.stroke();
+      mainCtx.restore();
+
+      // Current End Point Pulsing Indicator
+      const last = coords[coords.length - 1];
+      mainCtx.save();
+      mainCtx.fillStyle = '#52D1DC';
+      mainCtx.shadowColor = 'rgba(82, 209, 220, 1)';
+      mainCtx.shadowBlur = 12;
+      mainCtx.beginPath();
+      mainCtx.arc(last.x, last.y, 4, 0, Math.PI * 2);
+      mainCtx.fill();
+      mainCtx.restore();
+    }
+
+    // =========================================================================
+    // CHART 2: HOURLY / MONTHLY DISTRIBUTION BAR CHART
+    // =========================================================================
+    const dexCanvas = document.getElementById('dexVolumeCanvas');
+    const dexCtx = dexCanvas.getContext('2d');
+
+    function drawActivityChart() {
+      const rect = dexCanvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      dexCanvas.width = rect.width * dpr;
+      dexCanvas.height = rect.height * dpr;
+      dexCtx.scale(dpr, dpr);
+
+      const w = rect.width;
+      const h = rect.height;
+      dexCtx.clearRect(0, 0, w, h);
+
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const values = [25, 40, 30, 48, 55, 92, 45, 60, 52, 68, 74, 85];
+      const maxVal = Math.max(...values);
+      const barW = (w / months.length) * 0.45;
+      const gap = w / months.length;
+
+      months.forEach((m, i) => {
+        const barH = (values[i] / maxVal) * (h - 45);
+        const x = i * gap + (gap - barW) / 2;
+        const y = h - 22 - barH;
+
+        if (m === 'Jun') {
+          // Highlighted Active Month Pill & Bar
+          dexCtx.save();
+          dexCtx.shadowColor = 'rgba(82, 209, 220, 0.7)';
+          dexCtx.shadowBlur = 12;
+          dexCtx.fillStyle = '#52D1DC';
+          dexCtx.beginPath();
+          dexCtx.roundRect(x, y, barW, barH, [4, 4, 0, 0]);
+          dexCtx.fill();
+          dexCtx.restore();
+
+          // Tooltip badge above Jun bar
+          dexCtx.fillStyle = '#1C1F28';
+          dexCtx.strokeStyle = 'var(--border-light)';
+          dexCtx.lineWidth = 1;
+          dexCtx.beginPath();
+          dexCtx.roundRect(x - 14, y - 26, barW + 28, 20, 6);
+          dexCtx.fill();
+          dexCtx.stroke();
+
+          dexCtx.fillStyle = '#FFFFFF';
+          dexCtx.font = 'bold 9px "Geist Mono", monospace';
+          dexCtx.fillText('Jun • 92t', x - 10, y - 13);
+        } else {
+          dexCtx.fillStyle = '#222530';
+          dexCtx.beginPath();
+          dexCtx.roundRect(x, y, barW, barH, [4, 4, 0, 0]);
+          dexCtx.fill();
+        }
+
+        dexCtx.fillStyle = m === 'Jun' ? '#FFFFFF' : 'var(--text-muted)';
+        dexCtx.font = m === 'Jun' ? 'bold 10px "Geist Mono"' : '10px "Geist Mono"';
+        dexCtx.fillText(m, x - 2, h - 6);
+      });
+    }
+
+    // =========================================================================
+    // CHART 3: SEMICIRCLE RADIAL GRADIENT GAUGE
+    // =========================================================================
+    const gaugeCanvas = document.getElementById('gaugeCanvas');
+    const gaugeCtx = gaugeCanvas.getContext('2d');
+
+    function drawGauge(pct) {
+      const w = gaugeCanvas.width;
+      const h = gaugeCanvas.height;
+      gaugeCtx.clearRect(0, 0, w, h);
+
+      const cx = w / 2;
+      const cy = h - 10;
+      const radius = 68;
+      const startAngle = Math.PI;
+      const endAngle = 0;
+
+      // Track Background Arc
+      gaugeCtx.beginPath();
+      gaugeCtx.arc(cx, cy, radius, startAngle, endAngle);
+      gaugeCtx.lineWidth = 10;
+      gaugeCtx.strokeStyle = '#222530';
+      gaugeCtx.lineCap = 'round';
+      gaugeCtx.stroke();
+
+      // Active Gradient Arc
+      const clamped = Math.max(0.05, Math.min(0.99, pct));
+      const currentAngle = startAngle + clamped * Math.PI;
+
+      const grad = gaugeCtx.createLinearGradient(0, cy, w, cy);
+      grad.addColorStop(0, '#52D1DC');
+      grad.addColorStop(0.5, '#2ED573');
+      grad.addColorStop(1, '#A855F7');
+
+      gaugeCtx.save();
+      gaugeCtx.shadowColor = 'rgba(82, 209, 220, 0.45)';
+      gaugeCtx.shadowBlur = 8;
+      gaugeCtx.beginPath();
+      gaugeCtx.arc(cx, cy, radius, startAngle, currentAngle);
+      gaugeCtx.lineWidth = 10;
+      gaugeCtx.strokeStyle = grad;
+      gaugeCtx.lineCap = 'round';
+      gaugeCtx.stroke();
+      gaugeCtx.restore();
+    }
+
+    // =========================================================================
+    // CHART 4: NEON GREEN WAVE SPARKLINE (Position Velocity)
+    // =========================================================================
+    const greenCanvas = document.getElementById('greenWaveCanvas');
+    const greenCtx = greenCanvas.getContext('2d');
+
+    function drawGreenWave() {
+      const rect = greenCanvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      greenCanvas.width = rect.width * dpr;
+      greenCanvas.height = rect.height * dpr;
+      greenCtx.scale(dpr, dpr);
+
+      const w = rect.width;
+      const h = rect.height;
+      greenCtx.clearRect(0, 0, w, h);
+
+      const pts = [
+        { x: 0, y: h * 0.75 },
+        { x: w * 0.15, y: h * 0.80 },
+        { x: w * 0.30, y: h * 0.35 },
+        { x: w * 0.45, y: h * 0.65 },
+        { x: w * 0.60, y: h * 0.70 },
+        { x: w * 0.75, y: h * 0.25 },
+        { x: w * 0.88, y: h * 0.40 },
+        { x: w, y: h * 0.20 }
+      ];
+
+      const fillGrad = greenCtx.createLinearGradient(0, 0, 0, h);
+      fillGrad.addColorStop(0, 'rgba(46, 213, 115, 0.22)');
+      fillGrad.addColorStop(1, 'rgba(46, 213, 115, 0.00)');
+
+      greenCtx.beginPath();
+      greenCtx.moveTo(0, h);
+      greenCtx.lineTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        const xc = (pts[i].x + pts[i - 1].x) / 2;
+        const yc = (pts[i].y + pts[i - 1].y) / 2;
+        greenCtx.quadraticCurveTo(pts[i - 1].x, pts[i - 1].y, xc, yc);
+      }
+      greenCtx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      greenCtx.lineTo(w, h);
+      greenCtx.closePath();
+      greenCtx.fillStyle = fillGrad;
+      greenCtx.fill();
+
+      // Glowing Green Stroke
+      greenCtx.save();
+      greenCtx.shadowColor = 'rgba(46, 213, 115, 0.7)';
+      greenCtx.shadowBlur = 8;
+      greenCtx.strokeStyle = '#2ED573';
+      greenCtx.lineWidth = 2.2;
+      greenCtx.beginPath();
+      greenCtx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        const xc = (pts[i].x + pts[i - 1].x) / 2;
+        const yc = (pts[i].y + pts[i - 1].y) / 2;
+        greenCtx.quadraticCurveTo(pts[i - 1].x, pts[i - 1].y, xc, yc);
+      }
+      greenCtx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      greenCtx.stroke();
+      greenCtx.restore();
+    }
+
+    // =========================================================================
+    // UI INTERACTION HANDLERS & MODAL BLOTTER
+    // =========================================================================
+    function setChartMode(mode) {
+      currentChartMode = mode;
+      ['chartModePnL', 'chartModeEquity', 'chartModeTrades'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+      if (mode === 'pnl') document.getElementById('chartModePnL')?.classList.add('active');
+      if (mode === 'equity') document.getElementById('chartModeEquity')?.classList.add('active');
+      if (mode === 'trades') document.getElementById('chartModeTrades')?.classList.add('active');
+      renderActiveTab();
+    }
+
+    function setTimeframe(tf) {
+      currentTimeframe = tf;
+      document.querySelectorAll('.echo-pill').forEach(b => {
+        if (['1D', '7D', '1M', '1Y', 'ALL'].includes(b.innerText)) {
+          b.classList.remove('active');
+          if (b.innerText === tf) b.classList.add('active');
+        }
+      });
+      renderActiveTab();
+    }
+
+    function setExecutionMode(mode) {
+      switchTab(mode);
+    }
+
+    function openBlottersModal() {
+      document.getElementById('blotterModal').style.display = 'flex';
+    }
+    function closeBlottersModal() {
+      document.getElementById('blotterModal').style.display = 'none';
+    }
+
+    function populateBlotterModal(trades) {
+      if (!trades || trades.length === 0) return;
+      document.getElementById('modalTradeCount').innerText = `${trades.length} Total Trades`;
+
+      const rows = trades.slice(-50).reverse().map((t, idx) => {
+        const isWin = (t.net_pnl_inr || 0) > 0;
+        const engineTag = t.size_inr > 5000 ? 'V7 Gravitas' : 'V9 Runner';
+        const color = isWin ? 'var(--green)' : 'var(--red)';
+        const exitTimeStr = t.exit_time ? new Date(t.exit_time).toLocaleTimeString() : '--';
+
+        return `
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 7px 4px; color: var(--text-muted);">${t.trade_num || idx + 1}</td>
+            <td style="padding: 7px 4px; color: var(--cyan); font-weight: 600;">${engineTag}</td>
+            <td style="padding: 7px 4px; color: var(--text-gray);">${exitTimeStr}</td>
+            <td style="padding: 7px 4px; font-weight: 700; color: #FFFFFF;">${t.symbol || 'TOKEN'}</td>
+            <td style="padding: 7px 4px;">₹${Number(t.size_inr || 1000).toLocaleString()}</td>
+            <td style="padding: 7px 4px; color: ${color}; font-weight: 600;">${(t.exit_multiple || 1).toFixed(2)}x</td>
+            <td style="padding: 7px 4px; font-weight: 700; color: ${color};">${(t.net_pnl_inr || 0) >= 0 ? '+' : ''}₹${Number(t.net_pnl_inr || 0).toFixed(2)}</td>
+            <td style="padding: 7px 4px; color: var(--text-muted); font-size: 11px;">${(t.exit_reason || '').slice(0, 38)}</td>
+            <td style="padding: 7px 4px; text-align: right;">
+              <a href="https://dexscreener.com/solana/${t.mint}" target="_blank" style="color: var(--cyan); text-decoration: none; font-weight: 600;">Chart ↗</a>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('blotterModalRows').innerHTML = rows;
+    }
+
+    // =========================================================================
+    // TELEMETRY SYNC ENGINE
+    // =========================================================================
+    async function refreshTelemetry() {
+      try {
+        const fetchJSON = async (ep) => {
+          try {
+            const r = await fetch(`/algo/api/${ep}`);
+            if (r.ok) return await r.json();
+          } catch(e) {}
+          try {
+            const r2 = await fetch(`api/${ep}`);
+            if (r2.ok) return await r2.json();
+          } catch(e) {}
+          return null;
+        };
+
+        const [v7, sniper, poly] = await Promise.all([
+          fetchJSON('state'),
+          fetchJSON('sniper'),
+          fetchJSON('polymarket')
+        ]);
+
+        if (v7) v7Data = v7;
+        if (sniper) sniperData = sniper;
+        if (poly) polyData = poly;
+
+        renderActiveTab();
+      } catch (err) {
+        console.warn("Telemetry refresh notice:", err);
+      }
+    }
+
+    function manualSyncFleet() {
+      const icon = document.getElementById('syncIcon');
+      const text = document.getElementById('syncBtnText');
+      if (icon) icon.style.animation = 'pulseGlow 0.5s 2 ease-in-out';
+      if (text) text.innerText = 'Syncing...';
+      refreshTelemetry().then(() => {
+        setTimeout(() => {
+          if (text) text.innerText = 'Sync Telemetry';
+          if (icon) icon.style.animation = 'none';
+        }, 500);
+      });
+    }
+
+    // Initialize Dashboard
+    function initDashboard() {
+      drawActivityChart();
+      drawGauge(0.34);
+      drawGreenWave();
+      refreshTelemetry();
+      setInterval(refreshTelemetry, 2500);
+    }
+
+    window.addEventListener('DOMContentLoaded', initDashboard);
+    window.addEventListener('resize', () => {
+      renderActiveTab();
+      drawActivityChart();
+      drawGreenWave();
+    });
+  </script>
+</body>
+</html>
